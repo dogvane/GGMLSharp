@@ -41,7 +41,27 @@ namespace GGMLSharp
 		public static ulong TensorOverheadLength => Native.ggml_tensor_overhead();
 		public static ulong GraphOverheadLength => Native.ggml_graph_overhead();
 
-		public static bool HasCuda => Native.ggml_cpu_has_cuda();
+		/// <summary>
+		/// 检查是否支持 CUDA（如果函数不存在则返回 false）
+		/// </summary>
+		public static bool HasCuda
+		{
+			get
+			{
+				try
+				{
+					return Native.ggml_backend_reg_by_name("CUDA") != IntPtr.Zero;
+				}
+				catch (DllNotFoundException)
+				{
+					return false;
+				}
+				catch (EntryPointNotFoundException)
+				{
+					return false;
+				}
+			}
+		}
 
 
 

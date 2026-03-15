@@ -6,8 +6,6 @@ namespace GGMLSharp
 {
     public unsafe class SafeGGmlBackend : SafeGGmlHandleBase
     {
-        private ggml_backend* ggml_backend => (ggml_backend*)handle;
-
         public SafeGGmlBackend()
         {
             this.handle = IntPtr.Zero;
@@ -41,9 +39,43 @@ namespace GGMLSharp
             return Native.ggml_backend_vk_init(index);
         }
 
-        public static bool HasCuda => Native.ggml_cpu_has_cuda();
+        public static bool HasCuda
+        {
+            get
+            {
+                try
+                {
+                    return Native.ggml_backend_reg_by_name("CUDA") != IntPtr.Zero;
+                }
+                catch (DllNotFoundException)
+                {
+                    return false;
+                }
+                catch (EntryPointNotFoundException)
+                {
+                    return false;
+                }
+            }
+        }
 
-        public static bool HasVulkan => Native.ggml_cpu_has_vulkan();
+        public static bool HasVulkan
+        {
+            get
+            {
+                try
+                {
+                    return Native.ggml_backend_reg_by_name("Vulkan") != IntPtr.Zero;
+                }
+                catch (DllNotFoundException)
+                {
+                    return false;
+                }
+                catch (EntryPointNotFoundException)
+                {
+                    return false;
+                }
+            }
+        }
 
         public void Free()
         {

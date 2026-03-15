@@ -1,8 +1,24 @@
 # GGMLSharp Introduction
 
 GGMLSharp is an API for C# to use [ggml](https://github.com/ggerganov/ggml).</br>
+
+``` commandline
+git submodule update --init --recursive
+git submodule init 
+git submodule update --remote --merge
+```
+
 ggml is a wonderful C-language machine-learning tool, and now you can use it with C#.</br>
 GGMLSharp contains all ggml shared libs and some demos. 
+
+``` 
+mkdir build
+cd build
+cmake ../
+cmake --build . --config Release
+
+```
+
 
 ## Feature
 

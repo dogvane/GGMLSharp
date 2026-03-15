@@ -104,7 +104,16 @@ namespace GGMLSharp
 			GGML_TYPE_F64 = 28,
 			GGML_TYPE_IQ1_M = 29,
 			GGML_TYPE_BF16 = 30,
-			GGML_TYPE_COUNT,
+			// GGML_TYPE_Q4_0_4_4 = 31, support has been removed from gguf files
+			// GGML_TYPE_Q4_0_4_8 = 32,
+			// GGML_TYPE_Q4_0_8_8 = 33,
+			GGML_TYPE_TQ1_0 = 34,
+			GGML_TYPE_TQ2_0 = 35,
+			// GGML_TYPE_IQ4_NL_4_4 = 36,
+			// GGML_TYPE_IQ4_NL_4_8 = 37,
+			// GGML_TYPE_IQ4_NL_8_8 = 38,
+			GGML_TYPE_MXFP4 = 39,
+			GGML_TYPE_COUNT = 40,
 		};
 
 		/// <summary>
@@ -176,6 +185,7 @@ namespace GGMLSharp
 			GGML_FTYPE_MOSTLY_IQ4_XS = 22, // except 1d tensors
 			GGML_FTYPE_MOSTLY_IQ1_M = 23, // except 1d tensors
 			GGML_FTYPE_MOSTLY_BF16 = 24, // except 1d tensors
+			GGML_FTYPE_MOSTLY_MXFP4 = 25, // except 1d tensors
 		};
 
 		/// <summary>
@@ -287,13 +297,22 @@ namespace GGMLSharp
 			GGML_UNARY_OP_TANH,
 			GGML_UNARY_OP_ELU,
 			GGML_UNARY_OP_RELU,
-			//GGML_UNARY_OP_SIGMOID,  //exist in ggml but in llama.cpp doesn't
+			GGML_UNARY_OP_SIGMOID,
 			GGML_UNARY_OP_GELU,
 			GGML_UNARY_OP_GELU_QUICK,
 			GGML_UNARY_OP_SILU,
 			GGML_UNARY_OP_HARDSWISH,
 			GGML_UNARY_OP_HARDSIGMOID,
-
+			// New unary operations in latest ggml
+			GGML_UNARY_OP_EXP,
+			GGML_UNARY_OP_EXPM1,
+			GGML_UNARY_OP_SOFTPLUS,
+			GGML_UNARY_OP_GELU_ERF,
+			GGML_UNARY_OP_XIELU,
+			GGML_UNARY_OP_FLOOR,
+			GGML_UNARY_OP_CEIL,
+			GGML_UNARY_OP_ROUND,
+			GGML_UNARY_OP_TRUNC,
 			GGML_UNARY_OP_COUNT,
 		};
 
@@ -354,6 +373,28 @@ namespace GGMLSharp
 			GGML_OP_POOL_MAX,
 			GGML_OP_POOL_AVG,
 			GGML_OP_POOL_COUNT,
+		};
+
+		/// <summary>
+		/// GLU (Gated Linear Unit) operations
+		/// </summary>
+		public enum ggml_glu_op
+		{
+			GGML_GLU_OP_REGLU,
+			GGML_GLU_OP_GEGLU,
+			GGML_GLU_OP_SWIGLU,
+			GGML_GLU_OP_SWIGLU_OAI,
+			GGML_GLU_OP_GEGLU_ERF,
+			GGML_GLU_OP_GEGLU_QUICK,
+		};
+
+		/// <summary>
+		/// Triangular matrix type
+		/// </summary>
+		public enum ggml_tri_type
+		{
+			GGML_TRIANGULAR_LOWER,
+			GGML_TRIANGULAR_UPPER,
 		};
 
 		public enum ggml_opt_type
@@ -430,61 +471,250 @@ namespace GGMLSharp
 			public fixed byte padding[4];
 		};
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct ggml_tensor
+		/// <summary>
+		/// ggml_tensor structure matching the C implementation exactly
+		/// Based on ggml/include/ggml.h v0.9.7-43
+		/// Total size: 396 bytes
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential, Pack = 8)]
+		public unsafe struct ggml_tensor
 		{
+			/// <summary>Offset +0, Size: 4 bytes</summary>
 			public ggml_type type;
-			public ggml_backend_type backend;
 
+			/// <summary>Offset +4, Size: 4 bytes (padding for alignment)</summary>
+			private int _padding_after_type;
+
+			/// <summary>Offset +8, Size: 8 bytes</summary>
 			public ggml_backend_buffer* buffer;
 
-			/// <summary>
-			/// number of elements
-			/// </summary>
-			public fixed int64_t ne[GGML_MAX_DIMS];
+			/// <summary>Offset +16, Size: 32 bytes (4 × 8 bytes)</summary>
+			public fixed int64_t ne[GGML_MAX_DIMS]; // number of elements
+
+			/// <summary>Offset +48, Size: 32 bytes (4 × 8 bytes)</summary>
 			public fixed size_t nb[GGML_MAX_DIMS]; // stride in bytes:
-												   // nb[0] = ggml_type_size(Type)
-												   // nb[1] = nb[0]   * (ne[0] / ggml_blck_size(Type)) + padding
+												   // nb[0] = ggml_type_size(type)
+												   // nb[1] = nb[0]   * (ne[0] / ggml_blck_size(type)) + padding
 												   // nb[i] = nb[i-1] * ne[i-1]
 
-			/// <summary>
-			/// compute data
-			/// </summary>
-			public ggml_op op;
+			/// <summary>Offset +80, Size: 4 bytes</summary>
+			public ggml_op op; // compute data
 
-			/// <summary>
+			/// <summary>Offset +84, Size: 4 bytes (padding for alignment)</summary>
+			private int _padding_after_op;
+
+			/// <summary>Offset +88, Size: 64 bytes (16 × 4 bytes)</summary>
 			/// op params - allocated as int32_t for alignment
-			/// </summary>
 			public fixed int32_t op_params[GGML_MAX_OP_PARAMS / sizeof(int32_t)];
 
+			/// <summary>Offset +152, Size: 4 bytes</summary>
 			public int32_t flags;
 
-			public ggml_tensor* grad;
-			public fixed long src[GGML_MAX_SRC];
+			/// <summary>Offset +156, Size: 4 bytes (padding for alignment)</summary>
+			private int _padding_after_flags;
 
-			///// <summary>
-			///// performance
-			///// </summary>
-			//public int perf_runs;
-			//public int64_t perf_cycles;
-			//public int64_t perf_time_us;
+			/// <summary>Offset +160, Size: 80 bytes (10 × 8 bytes)</summary>
+			/// Source tensors for operations
+			/// Matches C implementation: struct ggml_tensor * src[GGML_MAX_SRC]
+			public ggml_tensor_array_src src;
 
-			public ggml_tensor* view_src;
-			public size_t view_offs;
+			/// <summary>Offset +240, Size: 8 bytes</summary>
+			public ggml_tensor* view_src; // source tensor for views
 
-			public IntPtr data;
+			/// <summary>Offset +248, Size: 8 bytes</summary>
+			public size_t view_offs; // offset for views
 
-			public fixed byte name[GGML_MAX_NAME];
+			/// <summary>Offset +256, Size: 8 bytes</summary>
+			public IntPtr data; // pointer to tensor data
+
+			/// <summary>Offset +264, Size: 128 bytes</summary>
+			public fixed byte name[GGML_MAX_NAME]; // tensor name
+
+			/// <summary>Offset +392, Size: 8 bytes</summary>
+			public IntPtr extra; // extra things e.g. for ggml-cuda.cu
+
+			/// <summary>Offset +400, Size: 8 bytes</summary>
+			/// Padding to match C struct size
+			public fixed byte padding[8];
+		}
+		
+		/// <summary>
+		/// Array of ggml_tensor pointers
+		/// Matches C implementation: struct ggml_tensor * src[GGML_MAX_SRC]
+		/// Total size: GGML_MAX_SRC × 8 bytes (currently 10 × 8 = 80 bytes)
+		///
+		/// IMPORTANT: The number of src_N fields MUST exactly match GGML_MAX_SRC.
+		/// If GGML_MAX_SRC changes in the future, you MUST add/remove corresponding src_N fields.
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential, Pack = 8)]
+		public unsafe struct ggml_tensor_array_src
+		{
+			// 当前硬编码的字段数量，必须与 GGML_MAX_SRC 匹配
+			private const int LOCAL_FIELD_COUNT = 10;
+
+			/// <summary>Array size derived from GGML_MAX_SRC</summary>
+			public const int GGML_MAX_SRC_Size = GGML_MAX_SRC;
 
 			/// <summary>
-			/// extra things e.g. for ggml-cuda.cu
+			/// Array elements stored as ggml_tensor pointers
+			/// Field count: LOCAL_FIELD_COUNT (must equal GGML_MAX_SRC)
 			/// </summary>
-			public IntPtr extra;
+			public ggml_tensor* src_0, src_1, src_2, src_3, src_4, src_5, src_6, src_7, src_8, src_9;
 
-			//public fixed byte padding[8];
-		};
+			/// <summary>
+			/// Static constructor to validate array size matches GGML_MAX_SRC
+			/// Throws exception if mismatch detected
+			/// </summary>
+			static ggml_tensor_array_src()
+			{
+				if (LOCAL_FIELD_COUNT != GGML_MAX_SRC)
+				{
+					throw new InvalidOperationException(
+						$"ggml_tensor_array_src field count mismatch! " +
+						$"LOCAL_FIELD_COUNT={LOCAL_FIELD_COUNT} but GGML_MAX_SRC={GGML_MAX_SRC}. " +
+						$"Please update src_N fields to match GGML_MAX_SRC. " +
+						$"Current range: src_0 to src_{LOCAL_FIELD_COUNT - 1}, " +
+						$"required range: src_0 to src_{GGML_MAX_SRC - 1}."
+					);
+				}
+			}
+
+			/// <summary>
+			/// Gets the total size in bytes based on GGML_MAX_SRC
+			/// </summary>
+			public static readonly int BytesSize = GGML_MAX_SRC * sizeof(ggml_tensor*);
+
+			/// <summary>
+			/// Gets the size of this array (alias for GGML_MAX_SRC_Size)
+			/// </summary>
+			public int Length => GGML_MAX_SRC_Size;
+
+			/// <summary>
+			/// Indexer for array-style access using GGML_MAX_SRC bounds
+			/// Matches C array syntax: src[i]
+			/// </summary>
+			public ggml_tensor* this[int index]
+			{
+				get
+				{
+					if (index < 0 || index >= GGML_MAX_SRC_Size)
+						throw new ArgumentOutOfRangeException(
+							nameof(index),
+							index,
+							$"Index must be between 0 and {GGML_MAX_SRC_Size - 1} (GGML_MAX_SRC)"
+						);
+
+					return index switch
+					{
+						0 => src_0,
+						1 => src_1,
+						2 => src_2,
+						3 => src_3,
+						4 => src_4,
+						5 => src_5,
+						6 => src_6,
+						7 => src_7,
+						8 => src_8,
+						9 => src_9,
+						_ => null
+					};
+				}
+				set
+				{
+					if (index < 0 || index >= GGML_MAX_SRC_Size)
+						throw new ArgumentOutOfRangeException(
+							nameof(index),
+							index,
+							$"Index must be between 0 and {GGML_MAX_SRC_Size - 1} (GGML_MAX_SRC)"
+						);
+
+					switch (index)
+					{
+						case 0: src_0 = value; break;
+						case 1: src_1 = value; break;
+						case 2: src_2 = value; break;
+						case 3: src_3 = value; break;
+						case 4: src_4 = value; break;
+						case 5: src_5 = value; break;
+						case 6: src_6 = value; break;
+						case 7: src_7 = value; break;
+						case 8: src_8 = value; break;
+						case 9: src_9 = value; break;
+					}
+				}
+			}
+
+			/// <summary>
+			/// Clear all elements to null within GGML_MAX_SRC range
+			/// </summary>
+			public void Clear_GGML_MAX_SRC()
+			{
+				src_0 = src_1 = src_2 = src_3 = src_4 = src_5 = src_6 = src_7 = src_8 = src_9 = null;
+			}
+
+			/// <summary>
+			/// Copy from another array within GGML_MAX_SRC range
+			/// </summary>
+			public void CopyFrom_GGML_MAX_SRC(ggml_tensor_array_src other)
+			{
+				for (int i = 0; i < GGML_MAX_SRC_Size; i++)
+				{
+					this[i] = other[i];
+				}
+			}
+
+			/// <summary>
+			/// Convert to managed array of ggml_tensor pointers sized by GGML_MAX_SRC
+			/// </summary>
+			public ggml_tensor*[] ToArray_GGML_MAX_SRC()
+			{
+				ggml_tensor*[] array = new ggml_tensor*[GGML_MAX_SRC_Size];
+				for (int i = 0; i < GGML_MAX_SRC_Size; i++)
+				{
+					array[i] = this[i];
+				}
+				return array;
+			}
+
+			/// <summary>
+			/// Check if all elements are null within GGML_MAX_SRC range
+			/// </summary>
+			public bool IsAllNull_GGML_MAX_SRC()
+			{
+				for (int i = 0; i < GGML_MAX_SRC_Size; i++)
+				{
+					if (this[i] != null)
+						return false;
+				}
+				return true;
+			}
+
+			/// <summary>
+			/// Count non-null elements within GGML_MAX_SRC range
+			/// </summary>
+			public int CountNonNull_GGML_MAX_SRC()
+			{
+				int count = 0;
+				for (int i = 0; i < GGML_MAX_SRC_Size; i++)
+				{
+					if (this[i] != null)
+						count++;
+				}
+				return count;
+			}
+
+			/// <summary>
+			/// Get string representation showing GGML_MAX_SRC usage
+			/// </summary>
+			public override string ToString()
+			{
+				return $"ggml_tensor_array_src[{GGML_MAX_SRC_Size}] (BytesSize={BytesSize})";
+			}
+		}
+
 
 		public size_t GGML_TENSOR_SIZE => (ulong)sizeof(ggml_tensor);
+		
 		public delegate bool ggml_abort_callback(void* data);
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -518,24 +748,35 @@ namespace GGMLSharp
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ggml_cgraph
 		{
+			/// <summary>size of the graph</summary>
 			public int size;
+
+			/// <summary>number of nodes</summary>
 			public int n_nodes;
+
+			/// <summary>number of leaf nodes</summary>
 			public int n_leafs;
 
+			/// <summary>[size] graph nodes</summary>
 			public ggml_tensor** nodes;
+
+			/// <summary>[size] gradients</summary>
 			public ggml_tensor** grads;
+
+			/// <summary>[size] gradient accumulators</summary>
+			public ggml_tensor** grad_accs;
+
+			/// <summary>[size] leaf nodes</summary>
 			public ggml_tensor** leafs;
 
-			public ggml_hash_set visited_hash_table;
+			/// <summary>[hash_size] use counts</summary>
+			public int32_t* use_counts;
 
+			/// <summary>hash set for visited nodes</summary>
+			public ggml_hash_set visited_hash_set;
+
+			/// <summary>evaluation order</summary>
 			public ggml_cgraph_eval_order order;
-
-			///// <summary>
-			///// performance
-			///// </summary>
-			//public int perf_runs;
-			//public int64_t perf_cycles;
-			//public int64_t perf_time_us;
 		};
 
 		/// <summary>
@@ -609,18 +850,11 @@ namespace GGMLSharp
 			public IntPtr mem_buffer;
 			public bool mem_buffer_owned;
 			public bool no_alloc;
-			/// <summary>
-			/// this is used to save the no_alloc state when using scratch buffers
-			/// </summary>
-			public bool no_alloc_save;
 
 			public int n_objects;
 
 			public ggml_object* objects_begin;
 			public ggml_object* objects_end;
-
-			public ggml_scratch scratch;
-			public ggml_scratch scratch_save;
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -813,6 +1047,10 @@ namespace GGMLSharp
 			}
 		};
 
+		// 警告：以下 gguf_header 和 gguf_context 结构体定义与实际 C++ 实现不匹配！
+		// C++ 中的 gguf_context 使用了 std::vector，无法直接在 C# 中通过内存布局访问
+		// 请使用 SafeGGufContext 中提供的 C API 函数（如 gguf_get_version, gguf_get_n_kv 等）
+		// 保留此定义仅为了兼容性，但强烈建议不要直接使用
 		[StructLayout(LayoutKind.Sequential)]
 		public struct gguf_header
 		{
@@ -902,29 +1140,33 @@ namespace GGMLSharp
 			public size_t size;
 		};
 
+		/// <summary>
+		/// gguf_context 结构体 - 与 C++ 端内存布局一致
+		///
+		/// 警告：此结构体仅用于 P/Invoke 互操作，不要直接访问字段！
+		/// C++ 端使用 std::vector，其内存布局为 {begin, end, capacity} 三个指针
+		/// 请使用 SafeGGufContext 提供的 C API 函数访问数据
+		/// </summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct gguf_context
+		public unsafe struct gguf_context
 		{
-			public gguf_header header;
+			public uint version;
 
-			public IntPtr kv;
-			public gguf_tensor_info* infos;
+			// std::vector<gguf_kv> 的内存布局（3个指针）
+			private IntPtr kv_begin;     // 指向数据起始位置
+			private IntPtr kv_end;       // 指向数据结束位置
+			private IntPtr kv_capacity;  // 容量
 
-			public size_t alignment;
+			// std::vector<gguf_tensor_info> 的内存布局（3个指针）
+			private IntPtr info_begin;   // 指向数据起始位置
+			private IntPtr info_end;     // 指向数据结束位置
+			private IntPtr info_capacity;// 容量
 
-			/// <summary>
-			/// offset of `data` from beginning of file
-			/// </summary>
-			public size_t offset;
-
-			/// <summary>
-			/// size of `data` in bytes
-			/// </summary>
-			public size_t size;
-
-			//uint8_t * padding;
-			public IntPtr data;
-		};
+			public UIntPtr alignment;    // size_t
+			public UIntPtr offset;       // offset of `data` from beginning of file
+			public UIntPtr size;         // size of `data` in bytes
+			public IntPtr data;          // void*
+		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct gguf_init_params
@@ -936,6 +1178,7 @@ namespace GGMLSharp
 			/// </summary>
 			public ggml_context** ctx;
 		};
+
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct gguf_buf
@@ -1094,11 +1337,74 @@ namespace GGMLSharp
 
 		};
 
+		// Backend device interface
+		[StructLayout(LayoutKind.Sequential)]
+		public unsafe struct ggml_backend_device_i
+		{
+			// device name: short identifier for this device
+			public IntPtr get_name; // function pointer - will be set at runtime
+			// device description
+			public IntPtr get_description;
+			// device memory
+			public IntPtr get_memory;
+			// device type
+			public IntPtr get_type;
+			// device properties
+			public IntPtr get_props;
+			// backend initialization
+			public IntPtr init_backend;
+			// preferred buffer type
+			public IntPtr get_buffer_type;
+			// host buffer type
+			public IntPtr get_host_buffer_type;
+			// buffer from pointer
+			public IntPtr buffer_from_host_ptr;
+			// check if supports operation
+			public IntPtr supports_op;
+			// check if supports buffer type
+			public IntPtr supports_buft;
+			// offload operation
+			public IntPtr offload_op;
+			// event synchronization
+			public IntPtr event_new;
+			public IntPtr event_free;
+			public IntPtr event_synchronize;
+		};
+
+		// Backend device
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ggml_backend_device
+		{
+			public ggml_backend_device_i iface;
+			public ggml_backend_reg* reg;
+			public IntPtr context;
+		};
+
+		// Backend reg interface
+		[StructLayout(LayoutKind.Sequential)]
+		public unsafe struct ggml_backend_reg_i
+		{
+			public IntPtr get_name;
+			public IntPtr get_device_count;
+			public IntPtr get_device;
+			public IntPtr get_proc_address;
+		};
+
+		// Backend reg
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ggml_backend_reg
+		{
+			public int api_version;
+			public ggml_backend_reg_i iface;
+			public IntPtr context;
+		};
+
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ggml_backend_buffer_type
 		{
 			public ggml_backend_buffer_type_i iface;
-			public ggml_backend_buffer_type_context_t context;
+			public ggml_backend_device* device;
+			public IntPtr context;
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -1107,7 +1413,8 @@ namespace GGMLSharp
 			public ggml_guid_t guid;
 
 			public ggml_backend_i iface;
-			public ggml_backend_context_t context;
+			public ggml_backend_device* device;
+			public IntPtr context;
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -1173,7 +1480,7 @@ namespace GGMLSharp
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ggml_backend_event
 		{
-			public ggml_backend* backend;
+			public ggml_backend_device* device;
 			public IntPtr context;
 		};
 
@@ -1196,6 +1503,102 @@ namespace GGMLSharp
 		{
 			GGML_BACKEND_BUFFER_USAGE_ANY = 0,
 			GGML_BACKEND_BUFFER_USAGE_WEIGHTS = 1,
+		};
+
+		/// <summary>
+		/// Backend device type
+		/// </summary>
+		public enum ggml_backend_dev_type
+		{
+			/// <summary>CPU device using system memory</summary>
+			GGML_BACKEND_DEVICE_TYPE_CPU,
+			/// <summary>GPU device using dedicated memory</summary>
+			GGML_BACKEND_DEVICE_TYPE_GPU,
+			/// <summary>integrated GPU device using host memory</summary>
+			GGML_BACKEND_DEVICE_TYPE_IGPU,
+			/// <summary>accelerator devices intended to be used together with the CPU backend (e.g. BLAS or AMX)</summary>
+			GGML_BACKEND_DEVICE_TYPE_ACCEL
+		};
+
+		/// <summary>
+		/// Functionality supported by the device
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ggml_backend_dev_caps
+		{
+			/// <summary>asynchronous operations</summary>
+			public bool async;
+			/// <summary>pinned host buffer</summary>
+			public bool host_buffer;
+			/// <summary>creating buffers from host ptr</summary>
+			public bool buffer_from_host_ptr;
+			/// <summary>event synchronization</summary>
+			public bool events;
+		};
+
+		/// <summary>
+		/// All the device properties
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public unsafe struct ggml_backend_dev_props
+		{
+			/// <summary>device name</summary>
+			public IntPtr name; // const char *
+			/// <summary>device description</summary>
+			public IntPtr description; // const char *
+			/// <summary>device free memory in bytes</summary>
+			public size_t memory_free;
+			/// <summary>device total memory in bytes</summary>
+			public size_t memory_total;
+			/// <summary>device type</summary>
+			public ggml_backend_dev_type type;
+			/// <summary>
+			/// device id:
+			///   for PCI devices, this should be the PCI bus id formatted as "domain:bus:device.function" (e.g. "0000:01:00.0")
+			///   if the id is unknown, this should be NULL
+			/// </summary>
+			public IntPtr device_id; // const char *
+			/// <summary>device capabilities</summary>
+			public ggml_backend_dev_caps caps;
+
+			/// <summary>
+			/// Gets the device_id as a string (returns null if device_id is NULL)
+			/// </summary>
+			public string? DeviceIdString
+			{
+				get
+				{
+					if (device_id == IntPtr.Zero)
+						return null;
+					return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(device_id);
+				}
+			}
+
+			/// <summary>
+			/// Gets the name as a string (returns null if name is NULL)
+			/// </summary>
+			public string? NameString
+			{
+				get
+				{
+					if (name == IntPtr.Zero)
+						return null;
+					return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(name);
+				}
+			}
+
+			/// <summary>
+			/// Gets the description as a string (returns null if description is NULL)
+			/// </summary>
+			public string? DescriptionString
+			{
+				get
+				{
+					if (description == IntPtr.Zero)
+						return null;
+					return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(description);
+				}
+			}
 		};
 
 		[StructLayout(LayoutKind.Sequential)]

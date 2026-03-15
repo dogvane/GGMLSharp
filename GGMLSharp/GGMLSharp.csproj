@@ -1,32 +1,99 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
-
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>x64</PlatformTarget>
-
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
 
+    <!-- 基础包信息 -->
     <PackageId>GGMLSharp</PackageId>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <Authors>SciSharp STACK</Authors>
-    <Description>High-performance, cross-platform C#/.NET wrapper for the ggml library</Description>
-    <PackageTags>GGML, MachineLearning, SciSharp, LLM, GPT, LLaMA</PackageTags>
-    <Copyright>Copyright © 2023-2025 SciSharp STACK</Copyright>
+    <Description>High-performance, cross-platform C#/NET wrapper for the ggml library</Description>
+    <PackageTags>GGML,MachineLearning,SciSharp,LLM,GPT,LLaMA</PackageTags>
+    <Copyright>Copyright 2023-2025 SciSharp STACK</Copyright>
     <PackageProjectUrl>https://github.com/SciSharp/GGMLSharp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/SciSharp/GGMLSharp</RepositoryUrl>
+
+    <!-- 支持运行时包分发 -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- CPU 版本变体 -->
+  <PropertyGroup Condition="'$(PackageVariant)' == 'CPU'">
+    <PackageId>GGMLSharp.CPU</PackageId>
+    <Description>GGMLSharp with CPU backend - Windows x64</Description>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- CUDA 版本变体 -->
+  <PropertyGroup Condition="'$(PackageVariant)' == 'CUDA'">
+    <PackageId>GGMLSharp.CUDA</PackageId>
+    <Description>GGMLSharp with CUDA GPU acceleration - Windows x64</Description>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- 统一版本 -->
+  <PropertyGroup Condition="'$(PackageVariant)' == ''">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!--
+    使用 RuntimeTargets 实现 NuGet 包中自动 DLL 选择
+    结构:
+    runtimes/
+      win-x64/native/ggml.dll        <- CPU
+      win-x64-cuda/native/ggml.dll   <- CUDA
+  -->
+
+  <!-- CPU 版本原生库 -->
+  <ItemGroup Condition="'$(PackageVariant)' == '' OR '$(PackageVariant)' == 'CPU'">
+    <Content Include="ggml-base.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ggml-cpu.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="ggml.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="libggml.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </ItemGroup>
+
+  <!-- CUDA 版本原生库 -->
+  <ItemGroup Condition="'$(PackageVariant)' == '' OR '$(PackageVariant)' == 'CUDA'">
+    <Content Include="runtimes\win-x64-cuda\native\ggml.dll">
+      <Link>runtimes/win-x64-cuda/native/ggml.dll</Link>
+      <PackagePath>runtimes/win-x64-cuda/native/ggml.dll</PackagePath>
+      <CopyToOutput>true</CopyToOutput>
     </Content>
+  </ItemGroup>
+
+  <!-- 项目源文件 -->
+  <ItemGroup>
+    <Compile Include="Common.cs" />
+    <Compile Include="DataConverter.cs" />
+    <Compile Include="GGmlAssertException.cs" />
+    <Compile Include="GGMLConfig.cs" />
+    <Compile Include="GgufValidationExtensions.cs" />
+    <Compile Include="InternalStructs.cs" />
+    <Compile Include="Modules.cs" />
+    <Compile Include="Native.cs" />
+    <Compile Include="SafeGGmlBackend*.cs" />
+    <Compile Include="SafeGGmlBuffer*.cs" />
+    <Compile Include="SafeGGmlContext.cs" />
+    <Compile Include="SafeGGmlGraph*.cs" />
+    <Compile Include="SafeGGmlHandleBase.cs" />
+    <Compile Include="SafeGGmlObject.cs" />
+    <Compile Include="SafeGGmlOptContext.cs" />
+    <Compile Include="SafeGGmlTensor.cs" />
+    <Compile Include="SafeGGuf*.cs" />
+    <Compile Include="Structs.cs" />
   </ItemGroup>
 
 </Project>

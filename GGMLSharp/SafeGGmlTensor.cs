@@ -78,11 +78,15 @@ namespace GGMLSharp
 
 		public Structs.GGmlType Type => (Structs.GGmlType)tensor->type;
 
-		public Structs.GGmlBackendType Backend => (Structs.GGmlBackendType)tensor->backend;
+		// NOTE: 'backend' field removed in ggml v0.9.7+
+		// Backend information is now managed separately through the buffer system
+		// public Structs.GGmlBackendType Backend => (Structs.GGmlBackendType)tensor->backend;
 
 		public IntPtr Data => tensor->data;
 
-		public SafeGGmlTensor Grad => new SafeGGmlTensor((IntPtr)tensor->grad);
+		// NOTE: 'grad' field removed from ggml_tensor structure
+		// Gradients are now managed separately through the computation graph
+		// public SafeGGmlTensor Grad => new SafeGGmlTensor((IntPtr)tensor->grad);
 
 		public SafeGGmlTensor ViewSource => new SafeGGmlTensor(tensor->view_src);
 
@@ -101,7 +105,8 @@ namespace GGMLSharp
 				SafeGGmlTensor[] src = new SafeGGmlTensor[GGML_MAX_SRC];
 				for (int i = 0; i < GGML_MAX_SRC; i++)
 				{
-					src[i] = new SafeGGmlTensor(new IntPtr(tensor->src[i]));
+					// 使用 ggml_tensor_array_src 的索引器访问 src 数组，直接返回 ggml_tensor*
+					src[i] = new SafeGGmlTensor((IntPtr)(tensor->src[i]));
 				}
 				return src;
 			}
@@ -110,31 +115,104 @@ namespace GGMLSharp
 		public void SetData(byte[] data)
 		{
 			ThrowIfNotInitialized();
-			if (tensor->data == IntPtr.Zero)
+			if (data == null || data.Length == 0)
 			{
-				tensor->data = Marshal.AllocHGlobal(data.Length);
+				throw new ArgumentNullException(nameof(data), "Data array is null or empty");
 			}
-			Marshal.Copy(data, 0, tensor->data, data.Length);
+
+			ulong size = (ulong)data.Length;
+			ulong tensorSize = ElementsSize * (ulong)ElementsCount;
+
+			if (size != tensorSize)
+			{
+				throw new ArgumentOutOfRangeException(nameof(data), $"Data size {size} bytes does not match tensor size {tensorSize} bytes");
+			}
+
+			// 分配临时非托管内存
+			IntPtr tempBuffer = Marshal.AllocHGlobal((int)size);
+			try
+			{
+				// 复制数据到临时缓冲区
+				Marshal.Copy(data, 0, tempBuffer, data.Length);
+				// 使用 backend API 来设置数据
+				Native.ggml_backend_tensor_set(this, tempBuffer, 0, size);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(tempBuffer);
+			}
 		}
 
 		public void SetData(float[] data)
 		{
 			ThrowIfNotInitialized();
-			if (tensor->data == IntPtr.Zero)
+			if (data == null || data.Length == 0)
 			{
-				tensor->data = Marshal.AllocHGlobal(data.Length * sizeof(float));
+				throw new ArgumentNullException(nameof(data), "Data array is null or empty");
 			}
-			Marshal.Copy(data, 0, tensor->data, data.Length);
+
+			// 计算需要的字节数
+			ulong size = (ulong)(data.Length * sizeof(float));
+			ulong tensorSize = ElementsSize * (ulong)ElementsCount;
+
+			if (size != tensorSize)
+			{
+				throw new ArgumentOutOfRangeException(nameof(data), $"Data size {size} bytes does not match tensor size {tensorSize} bytes");
+			}
+
+			// 分配临时非托管内存
+			IntPtr tempBuffer = Marshal.AllocHGlobal((int)size);
+			try
+			{
+				// 复制数据到临时缓冲区
+				Marshal.Copy(data, 0, tempBuffer, data.Length);
+				// 使用 backend API 来设置数据（这个方法可以处理所有情况）
+				Native.ggml_backend_tensor_set(this, tempBuffer, 0, size);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(tempBuffer);
+			}
 		}
 
 		public void SetData(int[] data)
 		{
 			ThrowIfNotInitialized();
-			if (tensor->data == IntPtr.Zero)
+			if (data == null || data.Length == 0)
 			{
-				tensor->data = Marshal.AllocHGlobal(data.Length * sizeof(float));
+				throw new ArgumentNullException(nameof(data), "Data array is null or empty");
 			}
-			Marshal.Copy(data, 0, tensor->data, data.Length);
+
+			// 计算需要的字节数（将 int 转换为 float）
+			ulong size = (ulong)(data.Length * sizeof(float));
+			ulong tensorSize = ElementsSize * (ulong)ElementsCount;
+
+			if (size != tensorSize)
+			{
+				throw new ArgumentOutOfRangeException(nameof(data), $"Data size {size} bytes does not match tensor size {tensorSize} bytes");
+			}
+
+			// 复制数据（int 转换为 float）
+			// 先将 int 转换为 float，然后复制
+			float[] floatData = new float[data.Length];
+			for (int i = 0; i < data.Length; i++)
+			{
+				floatData[i] = (float)data[i];
+			}
+
+			// 分配临时非托管内存
+			IntPtr tempBuffer = Marshal.AllocHGlobal((int)size);
+			try
+			{
+				// 复制数据到临时缓冲区
+				Marshal.Copy(floatData, 0, tempBuffer, floatData.Length);
+				// 使用 backend API 来设置数据
+				Native.ggml_backend_tensor_set(this, tempBuffer, 0, size);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(tempBuffer);
+			}
 		}
 
 		//public void SetData(float data, int index)
@@ -279,6 +357,12 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_is_contiguous(this);
+		}
+
+		public bool IsView()
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_is_view(this);
 		}
 
 		public bool IsQuantized()

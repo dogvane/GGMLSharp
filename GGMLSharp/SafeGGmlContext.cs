@@ -61,7 +61,6 @@ namespace GGMLSharp
 		public IntPtr MemoryBuff => context->mem_buffer;
 		public ulong MemorySize => context->mem_size;
 		public bool NoAlloc => Convert.ToBoolean(context->no_alloc);
-		public bool NoAllocSave => Convert.ToBoolean(context->no_alloc_save);
 		public int ObjectsCount => context->n_objects;
 		public bool MemoryBufferOwned => Convert.ToBoolean(context->mem_buffer_owned);
 
@@ -777,10 +776,10 @@ namespace GGMLSharp
 			return Native.ggml_div(this, a, b);
 		}
 
-		public SafeGGmlTensor Upscale(SafeGGmlTensor a, int factor)
+		public SafeGGmlTensor Upscale(SafeGGmlTensor a, int factor, Structs.GGmlScaleMode mode = Structs.GGmlScaleMode.GGML_SCALE_MODE_NEAREST)
 		{
 			ThrowIfNotInitialized();
-			return Native.ggml_upscale(this, a, factor);
+			return Native.ggml_upscale(this, a, factor, mode);
 		}
 
 

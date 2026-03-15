@@ -1,26 +1,66 @@
-﻿using System;
-using System.Net.NetworkInformation;
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
-using static GGMLSharp.InternalStructs;
 
 namespace GGMLSharp
 {
 	public unsafe class SafeGGufContext : SafeGGmlHandleBase, IDisposable
 	{
-		private gguf_context* gguf_context => (gguf_context*)handle;
 		private bool IsInitialized => handle != IntPtr.Zero;
-		public bool IsHeaderMagicMatch => Marshal.PtrToStringAnsi((IntPtr)gguf_context->header.magic).Contains("GGUF");
 
-		public ulong TensorsCount => gguf_context->header.n_tensors;
-		public uint Version => gguf_context->header.version;
-		public ulong KeyValuesCount => gguf_context->header.n_kv;
+		public uint Version
+		{
+			get
+			{
+				ThrowIfNotInitialized();
+				return (uint)Native.gguf_get_version(this);
+			}
+		}
 
-		public ulong Alignment => gguf_context->alignment;
+		public ulong KeyValuesCount
+		{
+			get
+			{
+				ThrowIfNotInitialized();
+				return (ulong)Native.gguf_get_n_kv(this);
+			}
+		}
+
+		public ulong TensorsCount
+		{
+			get
+			{
+				ThrowIfNotInitialized();
+				return (ulong)Native.gguf_get_n_tensors(this);
+			}
+		}
+
+		public ulong Alignment
+		{
+			get
+			{
+				ThrowIfNotInitialized();
+				return Native.gguf_get_alignment(this);
+			}
+		}
+
+		public ulong DataOffset
+		{
+			get
+			{
+				ThrowIfNotInitialized();
+				return Native.gguf_get_data_offset(this);
+			}
+		}
 
 		public SafeGGufContext()
 		{
 			this.handle = IntPtr.Zero;
+		}
+
+		public SafeGGufContext(IntPtr handle, bool ownsHandle) : base(handle, ownsHandle)
+		{
+			SetHandle(handle);
 		}
 
 		public static SafeGGufContext Initialize()
@@ -28,10 +68,32 @@ namespace GGMLSharp
 			return Native.gguf_init_empty();
 		}
 
+#if DEBUG
+		public static SafeGGufContext UnittestInitialize()
+		{
+			return Native.unittest_gguf_init();
+		}
+#endif
+
+		public string OpenModelFile { get; internal set; } = string.Empty;
+
+		internal new IntPtr DangerousGetHandle()
+		{
+			return handle;
+		}
+
 		public static SafeGGufContext InitFromFile(string fileName, SafeGGmlContext ggmlContext, bool noAlloc)
 		{
-			return Native.gguf_init_from_file(fileName, ggmlContext, noAlloc);
+			if (!File.Exists(fileName))
+			{
+				throw new FileNotFoundException($"File not found: {fileName}");
+			}
+
+			var ret = Native.gguf_init_from_file(fileName, ggmlContext, noAlloc);
+			ret.OpenModelFile = fileName;
+			return ret;
 		}
+
 
 		private void ThrowIfNotInitialized()
 		{
@@ -41,46 +103,22 @@ namespace GGMLSharp
 			}
 		}
 
-		public SafeGGufKeyValue[] KeyValues
-		{
-			get
-			{
-				SafeGGufKeyValue[] kvs = new SafeGGufKeyValue[KeyValuesCount];
-				for (ulong i = 0; i < KeyValuesCount; i++)
-				{
-					gguf_kv kv = Marshal.PtrToStructure<gguf_kv>(gguf_context->kv + (int)i * sizeof(gguf_kv));
-					kvs[i] = new SafeGGufKeyValue(kv);
-				}
-				return kvs;
-			}
-		}
+		// 注意：KeyValues 属性不再直接访问内存，因为 gguf_context 内部使用了 std::vector
+		// 如果需要遍历 key-value，建议使用 gguf_get_key, gguf_get_val_* 等 API 逐个获取
 
-		public SafeGGufTensorInfo[] GGufTensorInfos
-		{
-			get
-			{
-				SafeGGufTensorInfo[] infos = new SafeGGufTensorInfo[TensorsCount];
-				for (ulong i = 0; i < TensorsCount; i++)
-				{
-					//gguf_tensor_info info = Marshal.PtrToStructure<gguf_tensor_info>(gguf_context->infos + (int)i * sizeof(gguf_tensor_info));
-					infos[i] = new SafeGGufTensorInfo(gguf_context->infos[i]);
-				}
-				return infos;
-			}
-		}
+		// 注意：GGufTensorInfos 属性不再直接访问内存
+		// 如果需要 tensor 信息，建议使用 gguf_get_tensor_name, gguf_get_tensor_type 等 API 逐个获取
 
 		public void SetValueString(string key, string value)
 		{
 			ThrowIfNotInitialized();
 			Native.gguf_set_val_str(this, key, value);
-
 		}
 
 		public void SetValueBool(string key, bool value)
 		{
 			ThrowIfNotInitialized();
 			Native.gguf_set_val_bool(this, key, value);
-
 		}
 
 		public void SetValueFloat(string key, float value)
@@ -107,14 +145,12 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			Native.gguf_set_val_i32(this, key, value);
-
 		}
 
 		public void SetValueInt64(string key, Int64 value)
 		{
 			ThrowIfNotInitialized();
 			Native.gguf_set_val_i64(this, key, value);
-
 		}
 
 		public void SetValueInt8(string key, sbyte value)
@@ -122,7 +158,6 @@ namespace GGMLSharp
 			ThrowIfNotInitialized();
 			Native.gguf_set_val_i8(this, key, value);
 		}
-
 
 		public void SetValueUInt8(string key, byte value)
 		{
@@ -211,7 +246,6 @@ namespace GGMLSharp
 				pbMem[nbWritten] = 0;
 			}
 			return ptr;
-
 		}
 
 		public void WriteToFile(string filename, bool metaOnly = false)
@@ -226,23 +260,65 @@ namespace GGMLSharp
 			Native.gguf_add_tensor(this, tensor);
 		}
 
-
 		public string GetTensorName(int index)
 		{
 			ThrowIfNotInitialized();
-			return Native.gguf_get_tensor_name(this, index);
+			IntPtr ptr = Native.gguf_get_tensor_name(this, (long)index);
+			if (ptr == IntPtr.Zero)
+			{
+				return string.Empty;
+			}
+			return Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
 		}
 
+		// 为了兼容性保留这个方法，但内部通过 C API 获取
 		public ulong GetDataOffset()
 		{
-			ThrowIfNotInitialized();
-			return Native.gguf_get_data_offset(this);
-		} 
+			return DataOffset;
+		}
 
 		public ulong GetTensorOffset(int i)
 		{
 			ThrowIfNotInitialized();
 			return Native.gguf_get_tensor_offset(this, i);
 		}
+
+		public ulong GetTensorSize(int i)
+		{
+			ThrowIfNotInitialized();
+			return Native.gguf_get_tensor_size(this, (long)i);
+		}
+
+		public Structs.GGmlType GetTensorType(int i)
+		{
+			ThrowIfNotInitialized();
+			return Native.gguf_get_tensor_type(this, i);
+		}
+
+		// 添加一些便捷方法来获取单个 key-value 信息
+		public string GetKey(int keyId)
+		{
+			ThrowIfNotInitialized();
+			IntPtr ptr = Native.gguf_get_key(this, (long)keyId);
+			if (ptr == IntPtr.Zero)
+			{
+				return string.Empty;
+			}
+			return Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
+		}
+
+		public int FindKey(string key)
+		{
+			ThrowIfNotInitialized();
+			return Native.gguf_find_key(this, key) ? 0 : -1;
+		}
+	}
+
+	// 为了避免编译错误，保留这些类型声明，但不建议直接使用
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct gguf_str
+	{
+		public ulong n;
+		public IntPtr data;
 	}
 }

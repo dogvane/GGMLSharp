@@ -5,7 +5,7 @@ namespace GGMLSharp
 {
 	public unsafe class SafeGGmlBackendBuffer : SafeGGmlHandleBase
 	{
-		private ggml_backend_buffer* ggml_backend_buffer => (ggml_backend_buffer*)handle;
+		//private ggml_backend_buffer* ggml_backend_buffer => (ggml_backend_buffer*)handle;
 		
 		public SafeGGmlBackendBuffer()
 		{

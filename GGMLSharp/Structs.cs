@@ -41,9 +41,9 @@ namespace GGMLSharp
 
 		public const string GGUF_MAGIC = "GGUF";
 
-		public const int GGUF_VERSION = 3;
+		public const uint GGUF_VERSION = 3;
 
-		public const int GGUF_DEFAULT_ALIGNMENT = 32;
+		public const ulong GGUF_DEFAULT_ALIGNMENT = 32;
 		public const int GGML_N_TASKS_MAX = -1;
 		public const int GGML_KQ_MASK_PAD = 32;
 		public const int MAX_FREE_BLOCKS = 256;
@@ -89,7 +89,11 @@ namespace GGMLSharp
 			GGML_TYPE_F64 = 28,
 			GGML_TYPE_IQ1_M = 29,
 			GGML_TYPE_BF16 = 30,
-			GGML_TYPE_COUNT,
+			// New types in latest ggml
+			GGML_TYPE_TQ1_0 = 34,
+			GGML_TYPE_TQ2_0 = 35,
+			GGML_TYPE_MXFP4 = 39,
+			GGML_TYPE_COUNT = 40,
 		};
 
 		public enum GGufType
@@ -361,6 +365,72 @@ namespace GGMLSharp
 			GGML_OP_CROSS_ENTROPY_LOSS,
 			GGML_OP_CROSS_ENTROPY_LOSS_BACK,
 
+			// New operations in latest ggml
+			GGML_OP_ADD_ID,
+			GGML_OP_ADD_INPLACE,
+			GGML_OP_ADD_CAST,
+			// GGML_OP_ACC is already defined above
+			GGML_OP_CUMSUM,
+			GGML_OP_COUNT_EQUAL,
+			GGML_OP_L2_NORM,
+			GGML_OP_GLU,
+			GGML_OP_REGGLU,
+			GGML_OP_GEGLU,
+			GGML_OP_SWIGLU,
+			GGML_OP_SWIGLU_OAI,
+			GGML_OP_SOFT_MAX_EXT,
+			GGML_OP_SOFT_MAX_EXT_BACK,
+			GGML_OP_ROPE_EXT,
+			GGML_OP_ROPE_MULTI,
+			GGML_OP_ROPE_MULTI_BACK,
+			GGML_OP_CONV_1D,
+			GGML_OP_CONV_2D,
+			GGML_OP_CONV_2D_DW,
+			GGML_OP_CONV_3D,
+			GGML_OP_CONV_TRANSPOSE_3D,
+			GGML_OP_IM2COL_3D,
+			GGML_OP_POOL_2D_BACK,
+			GGML_OP_PAD_REFLECT_1D,
+			GGML_OP_PAD_EXT,
+			GGML_OP_PAD_CIRCULAR,
+			GGML_OP_INTERPOLATE,
+			GGML_OP_ARGSORT_TOP_K,
+			GGML_OP_TOP_K,
+			GGML_OP_RWKV_WKV6,
+			GGML_OP_RWKV_WKV7,
+			GGML_OP_GATED_LINEAR_ATTN,
+			GGML_OP_SOLVE_TRI,
+			GGML_OP_OPT_STEP_ADAMW,
+			GGML_OP_OPT_STEP_SGD,
+			GGML_OP_SET_ROWS,
+			GGML_OP_REPEAT_4D,
+			GGML_OP_BUILD_FORWARD_SELECT,
+			GGML_OP_CONT_1D,
+			GGML_OP_CONT_2D,
+			GGML_OP_CONT_3D,
+			GGML_OP_CONT_4D,
+			GGML_OP_SCALE_BIAS,
+			GGML_OP_IM2COL_BACK,
+			GGML_OP_ROLL,
+			GGML_OP_FILL,
+			GGML_OP_TRI,
+			GGML_OP_TOP_K_BACK,
+			GGML_OP_SOFT_MAX_ADD_SINKS,
+			GGML_OP_FLASH_ATTN_EXT_ADD_SINKS,
+			GGML_OP_RMS_NORM_1,
+			GGML_OP_NORM_BACK,
+			GGML_OP_MUL_MAT_ID_1,
+			GGML_OP_MUL_MAT_ID_2,
+			GGML_OP_MUL_MAT_ID_3,
+			GGML_OP_MUL_MAT_ID_4,
+			GGML_OP_MUL_MAT_ID_5,
+			GGML_OP_MUL_MAT_ID_6,
+			GGML_OP_MUL_MAT_ID_7,
+			GGML_OP_MUL_MAT_ID_8,
+			GGML_OP_MUL_MAT_ID_9,
+			GGML_OP_MUL_MAT_ID_10,
+			GGML_OP_CROSS_ENTROPY_LOSS_1,
+			GGML_OP_CROSS_ENTROPY_LOSS_BACK_1,
 			GGML_OP_COUNT,
 		};
 
@@ -391,6 +461,58 @@ namespace GGMLSharp
 			GGML_OP_POOL_MAX,
 			GGML_OP_POOL_AVG,
 			GGML_OP_POOL_COUNT,
+		};
+
+		/// <summary>
+		/// GLU (Gated Linear Unit) operations
+		/// </summary>
+		public enum GGmlGluOp
+		{
+			GGML_GLU_OP_REGLU,
+			GGML_GLU_OP_GEGLU,
+			GGML_GLU_OP_SWIGLU,
+			GGML_GLU_OP_SWIGLU_OAI,
+			GGML_GLU_OP_GEGLU_ERF,
+			GGML_GLU_OP_GEGLU_QUICK,
+		};
+
+		/// <summary>
+		/// Sort order for argsort operation
+		/// </summary>
+		public enum GGmlSortOrder
+		{
+			GGML_SORT_ORDER_ASC,
+			GGML_SORT_ORDER_DESC,
+		};
+
+		/// <summary>
+		/// Scale mode for interpolation operations
+		/// </summary>
+		public enum GGmlScaleMode
+		{
+			GGML_SCALE_MODE_NEAREST = 0,
+			GGML_SCALE_MODE_BILINEAR = 1,
+			GGML_SCALE_MODE_BICUBIC = 2,
+		};
+
+		/// <summary>
+		/// Triangular matrix type
+		/// </summary>
+		public enum GGmlTriType
+		{
+			GGML_TRIANGULAR_LOWER,
+			GGML_TRIANGULAR_UPPER,
+		};
+
+		/// <summary>
+		/// Tensor flags for marking input/output/parameter
+		/// </summary>
+		[Flags]
+		public enum GGmlTensorFlag
+		{
+			GGML_TENSOR_FLAG_INPUT = 1,
+			GGML_TENSOR_FLAG_OUTPUT = 2,
+			GGML_TENSOR_FLAG_PARAM = 4,
 		};
 
 	}
