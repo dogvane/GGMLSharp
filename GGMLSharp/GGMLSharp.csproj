@@ -80,6 +80,7 @@
     <Compile Include="DataConverter.cs" />
     <Compile Include="GGmlAssertException.cs" />
     <Compile Include="GGMLConfig.cs" />
+    <Compile Include="GGmlTallocr.cs" />
     <Compile Include="GgufValidationExtensions.cs" />
     <Compile Include="InternalStructs.cs" />
     <Compile Include="Modules.cs" />
@@ -94,6 +95,7 @@
     <Compile Include="SafeGGmlTensor.cs" />
     <Compile Include="SafeGGuf*.cs" />
     <Compile Include="Structs.cs" />
+    <Compile Include="Utils\*.cs" />
   </ItemGroup>
 
 </Project>

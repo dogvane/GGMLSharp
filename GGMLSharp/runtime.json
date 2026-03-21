@@ -1,0 +1,7 @@
+{
+  "runtimes": {
+    "win-x64-cuda": {
+      "#import": ["win-x64"]
+    }
+  }
+}
