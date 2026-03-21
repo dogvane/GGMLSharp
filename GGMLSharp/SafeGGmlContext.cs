@@ -7,6 +7,7 @@ namespace GGMLSharp
 	public unsafe class SafeGGmlContext : SafeGGmlHandleBase
 	{
 		private ggml_context* context => (ggml_context*)handle;
+		public IntPtr NativeHandle => handle;
 
 		private void ThrowIfNotInitialized()
 		{
@@ -146,10 +147,53 @@ namespace GGMLSharp
 			return Native.ggml_mul_mat(this, a, b);
 		}
 
+		public SafeGGmlTensor MulMatId(SafeGGmlTensor @as, SafeGGmlTensor ids, int id, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_mul_mat_id(this, @as, ids, id, b);
+		}
+
+		public SafeGGmlTensor MulMatId(SafeGGmlTensor @as, SafeGGmlTensor ids, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_mul_mat_id(this, @as, b, ids);
+		}
+
+		// GLU (Gated Linear Unit) operations
+		public SafeGGmlTensor GLU(SafeGGmlTensor a, Structs.GGmlGluOp op, bool swapped = false)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_glu(this, a, (InternalStructs.ggml_glu_op)op, swapped);
+		}
+
+		public SafeGGmlTensor ReGLU(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_reglu(this, a);
+		}
+
+		public SafeGGmlTensor GeGLU(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_geglu(this, a);
+		}
+
+		public SafeGGmlTensor SwiGLU(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_swiglu(this, a);
+		}
+
+		public SafeGGmlTensor SwiGLU_OAI(SafeGGmlTensor a, SafeGGmlTensor b, float alpha = 1.702f, float limit = 7.0f)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_swiglu_oai(this, a, b, alpha, limit);
+		}
+
 		public void SetParam(SafeGGmlTensor tensor)
 		{
 			ThrowIfNotInitialized();
-			Native.ggml_set_param(this, tensor);
+			Native.ggml_set_param(tensor);
 		}
 
 		public SafeGGmlTensor GetTensor(string name)
@@ -182,10 +226,28 @@ namespace GGMLSharp
 			return Native.ggml_relu(this, a);
 		}
 
+		public SafeGGmlTensor Sigmoid(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_sigmoid(this, a);
+		}
+
+		public SafeGGmlTensor Tanh(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_tanh(this, a);
+		}
+
 		public SafeGGmlTensor LeakyRelu(SafeGGmlTensor a, float negtiveSlope, bool inplace)
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_leaky_relu(this, a, negtiveSlope, inplace);
+		}
+
+		public SafeGGmlTensor XieLU(SafeGGmlTensor a, float alphaN, float alphaP, float beta, float eps)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_xielu(this, a, alphaN, alphaP, beta, eps);
 		}
 
 
@@ -254,6 +316,12 @@ namespace GGMLSharp
 			return Native.ggml_soft_max(this, a);
 		}
 
+		public SafeGGmlTensor SoftMaxBack(SafeGGmlTensor a, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_soft_max_back(this, a, b, 1.0f, 0.0f);
+		}
+
 		public SafeGGmlTensor Sub(SafeGGmlTensor a, SafeGGmlTensor b)
 		{
 			ThrowIfNotInitialized();
@@ -276,6 +344,164 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_sqrt(this, a);
+		}
+
+		// ========== 基础数学函数 ==========
+
+		public SafeGGmlTensor Abs(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_abs(this, a);
+		}
+
+		public SafeGGmlTensor Neg(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_neg(this, a);
+		}
+
+		public SafeGGmlTensor Step(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_step(this, a);
+		}
+
+		public SafeGGmlTensor Log(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_log(this, a);
+		}
+
+		// ========== 取整和限制函数 ==========
+
+		public SafeGGmlTensor Clamp(SafeGGmlTensor a, float min, float max)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_clamp(this, a, min, max);
+		}
+
+		public SafeGGmlTensor Floor(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_floor(this, a);
+		}
+
+		public SafeGGmlTensor Ceil(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_ceil(this, a);
+		}
+
+		public SafeGGmlTensor Round(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_round(this, a);
+		}
+
+		public SafeGGmlTensor Trunc(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_trunc(this, a);
+		}
+
+		// ========== 约简操作 ==========
+
+		public SafeGGmlTensor Mean(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_mean(this, a);
+		}
+
+		public SafeGGmlTensor SumRows(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_sum_rows(this, a);
+		}
+
+		// ========== 张量操作 ==========
+
+		public SafeGGmlTensor OutProd(SafeGGmlTensor a, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_out_prod(this, a, b);
+		}
+
+		public SafeGGmlTensor Acc(SafeGGmlTensor a, SafeGGmlTensor b, ulong nb1, ulong nb2, ulong nb3, ulong offset)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_acc(this, a, b, nb1, nb2, nb3, offset);
+		}
+
+		public SafeGGmlTensor Set(SafeGGmlTensor a, SafeGGmlTensor b, ulong nb1, ulong nb2, ulong nb3, ulong offset)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_set(this, a, b, nb1, nb2, nb3, offset);
+		}
+
+		public SafeGGmlTensor Pad(SafeGGmlTensor a, int p0, int p1, int p2, int p3)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_pad(this, a, p0, p1, p2, p3);
+		}
+
+		public SafeGGmlTensor PadReflect1D(SafeGGmlTensor a, int p0, int p1)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_pad_reflect_1d(this, a, p0, p1);
+		}
+
+		public SafeGGmlTensor Roll(SafeGGmlTensor a, int n0, int n1, int n2, int n3)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_roll(this, a, n0, n1, n2, n3);
+		}
+
+		public SafeGGmlTensor CumSum(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_cumsum(this, a);
+		}
+
+		public SafeGGmlTensor TimeStepEmbedding(SafeGGmlTensor timesteps, int dim, int maxPeriod)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_timestep_embedding(this, timesteps, dim, maxPeriod);
+		}
+
+		public SafeGGmlTensor ArgSort(SafeGGmlTensor a, InternalStructs.ggml_sort_order order)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_argsort(this, a, order);
+		}
+
+		public SafeGGmlTensor TopK(SafeGGmlTensor a, int k)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_top_k(this, a, k);
+		}
+
+		public SafeGGmlTensor Diag(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_diag(this, a);
+		}
+
+		public SafeGGmlTensor Tri(SafeGGmlTensor a, InternalStructs.ggml_tri_type type)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_tri(this, a, type);
+		}
+
+		public SafeGGmlTensor Fill(SafeGGmlTensor a, float value)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_fill(this, a, value);
+		}
+
+		public SafeGGmlTensor CountEqual(SafeGGmlTensor a, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_count_equal(this, a, b);
 		}
 
 		public SafeGGmlGraph NewGraph()
@@ -326,6 +552,12 @@ namespace GGMLSharp
 			return Native.ggml_cross_entropy_loss(this, a, b);
 		}
 
+		public SafeGGmlTensor CrossEntropyLossBack(SafeGGmlTensor a, SafeGGmlTensor b, SafeGGmlTensor c)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_cross_entropy_loss_back(this, a, b, c);
+		}
+
 		public SafeGGmlTensor Scale(SafeGGmlTensor tensor, float s)
 		{
 			ThrowIfNotInitialized();
@@ -348,6 +580,39 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_map_custom3(this, a, b, c, fun, taskCount, userdata);
+		}
+
+		public SafeGGmlTensor Custom4d(
+			Structs.GGmlType type,
+			long ne0,
+			long ne1,
+			long ne2,
+			long ne3,
+			SafeGGmlTensor[] args,
+			Structs.CustomOpDelegate fun,
+			int taskCount,
+			IntPtr userdata)
+		{
+			ThrowIfNotInitialized();
+			if (args == null || args.Length == 0)
+			{
+				throw new ArgumentException("Custom4d requires at least one source tensor.", nameof(args));
+			}
+
+			IntPtr nativeArgs = Marshal.AllocHGlobal(IntPtr.Size * args.Length);
+			try
+			{
+				for (int i = 0; i < args.Length; i++)
+				{
+					Marshal.WriteIntPtr(nativeArgs, i * IntPtr.Size, args[i]?.NativeHandle ?? IntPtr.Zero);
+				}
+
+				return Native.ggml_custom_4d(this, type, ne0, ne1, ne2, ne3, nativeArgs, args.Length, fun, taskCount, userdata);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(nativeArgs);
+			}
 		}
 
 		public SafeGGmlTensor View1d(SafeGGmlTensor tensor, long ne0, ulong offset)
@@ -402,6 +667,12 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_repeat(this, a, b);
+		}
+
+		public SafeGGmlTensor RepeatBack(SafeGGmlTensor a, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_repeat_back(this, a, b);
 		}
 
 
@@ -469,6 +740,12 @@ namespace GGMLSharp
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_add_rel_pos_inplace(this, tensor, pw, ph);
+		}
+
+		public SafeGGmlTensor AddRelPos(SafeGGmlTensor tensor, SafeGGmlTensor pw, SafeGGmlTensor ph)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_add_rel_pos(this, tensor, pw, ph);
 		}
 
 		public SafeGGmlTensor WinUnpart(SafeGGmlTensor tensor, int w0, int h0, int w)
@@ -643,6 +920,12 @@ namespace GGMLSharp
 			return Native.ggml_get_rows(this, a, b);
 		}
 
+		public SafeGGmlTensor GetRowsBack(SafeGGmlTensor a, SafeGGmlTensor b, SafeGGmlTensor c)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_get_rows_back(this, a, b, c);
+		}
+
 		public SafeGGmlTensor Dup(SafeGGmlTensor tensor)
 		{
 			ThrowIfNotInitialized();
@@ -764,10 +1047,28 @@ namespace GGMLSharp
 			return Native.ggml_rms_norm(this, a, eps);
 		}
 
+		public SafeGGmlTensor RmsNormBack(SafeGGmlTensor a, SafeGGmlTensor b, float eps)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_rms_norm_back(this, a, b, eps);
+		}
+
+		public SafeGGmlTensor L2Norm(SafeGGmlTensor a)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_l2_norm(this, a);
+		}
+
 		public SafeGGmlTensor SiLU(SafeGGmlTensor tensor)
 		{
 			ThrowIfNotInitialized();
 			return Native.ggml_silu(this, tensor);
+		}
+
+		public SafeGGmlTensor SiLUBack(SafeGGmlTensor a, SafeGGmlTensor b)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_silu_back(this, a, b);
 		}
 
 		public SafeGGmlTensor Div(SafeGGmlTensor a, SafeGGmlTensor b)
@@ -782,9 +1083,106 @@ namespace GGMLSharp
 			return Native.ggml_upscale(this, a, factor, mode);
 		}
 
+		public SafeGGmlTensor Conv1D(SafeGGmlTensor a, SafeGGmlTensor b, int s0, int p0, int d0)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_conv_1d(this, a, b, s0, p0, d0);
+		}
+
+		public SafeGGmlTensor ConvTranspose1D(SafeGGmlTensor a, SafeGGmlTensor b, int s0, int p0, int d0)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_conv_transpose_1d(this, a, b, s0, p0, d0);
+		}
+
+		public SafeGGmlTensor ConvTranspose2D(SafeGGmlTensor a, SafeGGmlTensor b, int stride)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_conv_transpose_2d_p0(this, a, b, stride);
+		}
+
+		public SafeGGmlTensor ConvDepthwise1D(SafeGGmlTensor a, SafeGGmlTensor b, int s0, int p0, int d0)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_conv_1d_dw(this, a, b, s0, p0, d0);
+		}
+
+		public SafeGGmlTensor ConvDepthwise2D(SafeGGmlTensor a, SafeGGmlTensor b, int s0, int s1, int p0, int p1, int d0, int d1)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_conv_depthwise_2d(this, a, b, s0, s1, p0, p1, d0, d1);
+		}
+
+		public SafeGGmlTensor Im2Col(SafeGGmlTensor a, SafeGGmlTensor b, int s0, int s1, int p0, int p1, int d0, int d1, bool is2D, Structs.GGmlType dstType)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_im2col(this, a, b, s0, s1, p0, p1, d0, d1, is2D, dstType);
+		}
+
+		public SafeGGmlTensor Interpolate(SafeGGmlTensor a, long ne0, long ne1, long ne2, long ne3, uint mode)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_interpolate(this, a, ne0, ne1, ne2, ne3, mode);
+		}
+
+		public SafeGGmlTensor Arange(float start, float stop, float step)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_arange(this, start, stop, step);
+		}
+
+		// ========== 优化器操作 ==========
+
+		public SafeGGmlTensor OptStepAdamW(SafeGGmlTensor a, SafeGGmlTensor grad, SafeGGmlTensor gradM, SafeGGmlTensor gradV, SafeGGmlTensor adamWParams)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_opt_step_adamw(this, a, grad, gradM, gradV, adamWParams);
+		}
+
+		public SafeGGmlTensor OptStepSGD(SafeGGmlTensor a, SafeGGmlTensor grad, SafeGGmlTensor sgdParams)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_opt_step_sgd(this, a, grad, sgdParams);
+		}
+
+		// ========== 状态空间模型 (SSM) 操作 ==========
+
+		public SafeGGmlTensor SsmConv(SafeGGmlTensor s, SafeGGmlTensor x, SafeGGmlTensor c, SafeGGmlTensor sq)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_ssm_conv(this, s, x, c, sq);
+		}
+
+		public SafeGGmlTensor SsmScan(SafeGGmlTensor s, SafeGGmlTensor x, SafeGGmlTensor dt, SafeGGmlTensor A, SafeGGmlTensor B, SafeGGmlTensor C, SafeGGmlTensor sq)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_ssm_scan(this, s, x, dt, A, B, C, sq);
+		}
+
+		// ========== RWKV 操作 ==========
+
+		public SafeGGmlTensor RwkvWkv6(SafeGGmlTensor k, SafeGGmlTensor v, SafeGGmlTensor r, SafeGGmlTensor tf, SafeGGmlTensor td, SafeGGmlTensor s)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_rwkv_wkv6(this, k, v, r, tf, td, s);
+		}
+
+		public SafeGGmlTensor RwkvWkv7(SafeGGmlTensor r, SafeGGmlTensor w, SafeGGmlTensor k, SafeGGmlTensor v, SafeGGmlTensor a, SafeGGmlTensor b, SafeGGmlTensor s)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_rwkv_wkv7(this, r, w, k, v, a, b, s);
+		}
+
+		// ========== 其他高级操作 ==========
+
+		public SafeGGmlTensor FlashAttn(SafeGGmlTensor q, SafeGGmlTensor k, SafeGGmlTensor v, bool masked)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_flash_attn(this, q, k, v, masked);
+		}
+
 
 	}
 
 
 }
-

@@ -405,7 +405,7 @@ namespace GGMLSharp
         public extern static void ggml_set_f32_nd(SafeGGmlTensor tensor, int i0, int i1, int i2, int i3, float value);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void* ggml_get_data(SafeGGmlTensor tensor);
+        public extern static IntPtr ggml_get_data(SafeGGmlTensor tensor);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static float* ggml_get_data_f32(SafeGGmlTensor tensor);
@@ -606,6 +606,9 @@ namespace GGMLSharp
         public extern static SafeGGmlTensor ggml_leaky_relu(SafeGGmlContext ctx, SafeGGmlTensor a, float negative_slope, bool inplace);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlTensor ggml_xielu(SafeGGmlContext ctx, SafeGGmlTensor a, float alpha_n, float alpha_p, float beta, float eps);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_relu_inplace(SafeGGmlContext ctx, SafeGGmlTensor a);
 
         // contains in ggml but not in llama.cpp
@@ -725,16 +728,15 @@ namespace GGMLSharp
 
 
         /// <summary>
-        /// this func contains in llama.cpp but not in ggml. indirect matrix multiplication ggml_mul_mat_id(ctx, as, ids, id, b) ~= ggml_mul_mat(as[ids[id]], b) 
+        /// this func contains in llama.cpp but not in ggml. indirect matrix multiplication ggml_mul_mat_id(ctx, as, b, ids) ~= ggml_mul_mat(as[ids[id]], b)
         /// </summary>
         /// <param name="ctx"></param>
         /// <param name="as"></param>
-        /// <param name="ids"></param>
-        /// <param name="id"></param>
         /// <param name="b"></param>
+        /// <param name="ids"></param>
         /// <returns></returns>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static SafeGGmlTensor ggml_mul_mat_id(SafeGGmlContext ctx, SafeGGmlTensor @as, SafeGGmlTensor ids, SafeGGmlTensor b);
+        public extern static SafeGGmlTensor ggml_mul_mat_id(SafeGGmlContext ctx, SafeGGmlTensor @as, SafeGGmlTensor b, SafeGGmlTensor ids);
 
         /// <summary>
         /// result is NumberOfCorrections columns, p rows
@@ -1047,8 +1049,8 @@ namespace GGMLSharp
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_soft_max_ext(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor mask, float scale, float max_bias);
 
-        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static SafeGGmlTensor ggml_soft_max_back(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b);
+        [DllImport(DllNameBase, EntryPoint = "ggml_soft_max_ext_back", CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlTensor ggml_soft_max_back(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, float scale, float max_bias);
 
         /// <summary>
         /// in-place, returns view(a)
@@ -1057,8 +1059,8 @@ namespace GGMLSharp
         /// <param name="a"></param>
         /// <param name="b"></param>
         /// <returns></returns>
-        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static SafeGGmlTensor ggml_soft_max_back_inplace(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b);
+        [DllImport(DllNameBase, EntryPoint = "ggml_soft_max_ext_back_inplace", CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlTensor ggml_soft_max_back_inplace(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, float scale, float max_bias);
 
         // rotary position embedding
         // if mode & 1 == 1, skip n_past elements (DEPRECATED)
@@ -1165,7 +1167,7 @@ namespace GGMLSharp
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_im2col(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, int s0, int s1, int p0, int p1, int d0, int d1, bool is_2D, Structs.GGmlType dst_type);
 
-        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DllNameBase, EntryPoint = "ggml_conv_2d_dw_direct", CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_conv_depthwise_2d(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, int s0, int s1, int p0, int p1, int d0, int d1);
 
         /// <summary>
@@ -1189,6 +1191,10 @@ namespace GGMLSharp
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
 
         public extern static SafeGGmlTensor ggml_conv_transpose_1d(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, int s0, int p0, int d0);
+
+        // conv_1d_depthwise
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlTensor ggml_conv_1d_dw(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, int s0, int p0, int d0);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_conv_2d(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, int s0, int s1, int p0, int p1, int d0, int d1);
@@ -1354,6 +1360,20 @@ namespace GGMLSharp
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_map_custom3_inplace(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor b, SafeGGmlTensor c, [MarshalAs(UnmanagedType.FunctionPtr)] Structs.Custom3OpDelegate fun, int n_tasks, IntPtr userdata);
 
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlTensor ggml_custom_4d(
+            SafeGGmlContext ctx,
+            Structs.GGmlType type,
+            int64_t ne0,
+            int64_t ne1,
+            int64_t ne2,
+            int64_t ne3,
+            IntPtr args,
+            int n_args,
+            [MarshalAs(UnmanagedType.FunctionPtr)] Structs.CustomOpDelegate fun,
+            int n_tasks,
+            IntPtr userdata);
+
         // loss function
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
@@ -1367,7 +1387,7 @@ namespace GGMLSharp
         //
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_set_param(SafeGGmlContext ctx, SafeGGmlTensor tensor);
+        public extern static void ggml_set_param(SafeGGmlTensor tensor);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static void ggml_build_forward_expand(SafeGGmlGraph cgraph, SafeGGmlTensor tensor);
@@ -1417,6 +1437,7 @@ namespace GGMLSharp
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlTensor ggml_graph_get_tensor(SafeGGmlGraph cgraph, string name);
+        
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static void ggml_graph_export(SafeGGmlGraph cgraph, string fname);
@@ -1444,6 +1465,9 @@ namespace GGMLSharp
 
         public delegate void ggml_opt_callback(void* data, int accum_step, float* sched, bool* cancel);
         public delegate void ggml_log_callback(ggml_log_level level, string text, void* user_data);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_log_set(ggml_log_callback callback, IntPtr user_data);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static Structs.OptimizerParameters ggml_opt_default_params(Structs.OptimizerType type);
@@ -1499,6 +1523,15 @@ namespace GGMLSharp
         // some quantization Type cannot be used without an importance matrix
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static bool ggml_quantize_requires_imatrix(Structs.GGmlType type);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_get_type_traits(Structs.GGmlType type);
+
+        [DllImport(DllNameCpu, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_get_type_traits_cpu(Structs.GGmlType type);
+
+        [DllImport(DllNameCpu, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_cpu_init();
 
         // calls ggml_quantize_init internally (i.e. can allocate memory)
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
@@ -2071,6 +2104,27 @@ namespace GGMLSharp
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
         public extern static SafeGGmlBackendBuffer ggml_backend_reg_alloc_buffer(size_t i, size_t size);
 
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_backend_load_all();
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static size_t ggml_backend_dev_count();
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_backend_dev_get(size_t index);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static SafeGGmlBackend ggml_backend_dev_init(IntPtr device, string? @params);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static string ggml_backend_dev_name(IntPtr device);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static string ggml_backend_dev_description(IntPtr device);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_backend_dev_memory(IntPtr device, out size_t free, out size_t total);
+
         /// <summary>
         /// Initialize a backend scheduler
         /// </summary>
@@ -2081,10 +2135,10 @@ namespace GGMLSharp
         /// <param name="parallel"></param>
         /// <returns></returns>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static ggml_backend_sched* ggml_backend_sched_new(SafeGGmlBackend* backends, ggml_backend_buffer_type** bufts, int n_backends, size_t graph_size, bool parallel);
+        public extern static IntPtr ggml_backend_sched_new(IntPtr* backends, IntPtr* bufts, int n_backends, size_t graph_size, [MarshalAs(UnmanagedType.I1)] bool parallel, [MarshalAs(UnmanagedType.I1)] bool op_offload);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_backend_sched_free(ggml_backend_sched* sched);
+        public extern static void ggml_backend_sched_free(IntPtr sched);
 
         /// <summary>
         /// Initialize backend buffers from a measure graph
@@ -2093,7 +2147,7 @@ namespace GGMLSharp
         /// <param name="measure_graph"></param>
         /// <returns></returns>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static bool ggml_backend_sched_reserve(ggml_backend_sched* sched, SafeGGmlGraph measure_graph);
+        public extern static bool ggml_backend_sched_reserve(IntPtr sched, SafeGGmlGraph measure_graph);
 
         /// <summary>
         /// Get the number of splits of the last graph
@@ -2101,19 +2155,19 @@ namespace GGMLSharp
         /// <param name="sched"></param>
         /// <returns></returns>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static int ggml_backend_sched_get_n_splits(ggml_backend_sched* sched);
+        public extern static int ggml_backend_sched_get_n_splits(IntPtr sched);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static int ggml_backend_sched_get_n_copies(ggml_backend_sched* sched);
+        public extern static int ggml_backend_sched_get_n_copies(IntPtr sched);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static size_t ggml_backend_sched_get_buffer_size(ggml_backend_sched* sched, SafeGGmlBackend backend);
+        public extern static size_t ggml_backend_sched_get_buffer_size(IntPtr sched, SafeGGmlBackend backend);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_backend_sched_set_tensor_backend(ggml_backend_sched* sched, SafeGGmlTensor node, SafeGGmlBackend backend);
+        public extern static void ggml_backend_sched_set_tensor_backend(IntPtr sched, SafeGGmlTensor node, SafeGGmlBackend backend);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static SafeGGmlBackend ggml_backend_sched_get_tensor_backend(ggml_backend_sched* sched, SafeGGmlTensor node);
+        public extern static SafeGGmlBackend ggml_backend_sched_get_tensor_backend(IntPtr sched, SafeGGmlTensor node);
 
         /// <summary>
         /// Allocate and compute graph on the backend scheduler
@@ -2122,23 +2176,23 @@ namespace GGMLSharp
         /// <param name="graph"></param>
         /// <returns></returns>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static bool ggml_backend_sched_alloc_graph(ggml_backend_sched* sched, SafeGGmlGraph graph);
+        public extern static bool ggml_backend_sched_alloc_graph(IntPtr sched, SafeGGmlGraph graph);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static ggml_status ggml_backend_sched_graph_compute(ggml_backend_sched* sched, SafeGGmlGraph graph);
+        public extern static ggml_status ggml_backend_sched_graph_compute(IntPtr sched, SafeGGmlGraph graph);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static ggml_status ggml_backend_sched_graph_compute_async(ggml_backend_sched* sched, SafeGGmlGraph graph);
+        public extern static ggml_status ggml_backend_sched_graph_compute_async(IntPtr sched, SafeGGmlGraph graph);
 
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_backend_sched_synchronize(ggml_backend_sched* sched);
+        public extern static void ggml_backend_sched_synchronize(IntPtr sched);
 
         /// <summary>
         /// Reset all assignments and allocators - must be called before changing the node backends
         /// </summary>
         /// <param name="sched"></param>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_backend_sched_reset(ggml_backend_sched* sched);
+        public extern static void ggml_backend_sched_reset(IntPtr sched);
 
         /// <summary>
         /// Set a callback to be called for each resulting node during graph compute
@@ -2147,7 +2201,7 @@ namespace GGMLSharp
         /// <param name="callback"></param>
         /// <param name="user_data"></param>
         [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
-        public extern static void ggml_backend_sched_set_eval_callback(ggml_backend_sched* sched, ggml_backend_sched_eval_callback callback, void* user_data);
+        public extern static void ggml_backend_sched_set_eval_callback(IntPtr sched, ggml_backend_sched_eval_callback callback, void* user_data);
 
         /// <summary>
         /// Compare the output of two backends
@@ -2526,6 +2580,120 @@ namespace GGMLSharp
         public extern static SafeGGmlTensor ggml_opt_step_sgd(SafeGGmlContext ctx, SafeGGmlTensor a, SafeGGmlTensor grad,
             SafeGGmlTensor sgd_params);
 
+        // ============ New GGML Optimizer API (ggml-opt.h) ============
+
+        // Dataset functions
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_dataset_init(Structs.GGmlType type_data, Structs.GGmlType type_label,
+            long ne_datapoint, long ne_label, long ndata, long ndata_shard);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_dataset_free(IntPtr dataset);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static long ggml_opt_dataset_ndata(IntPtr dataset);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_dataset_data(IntPtr dataset);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_dataset_labels(IntPtr dataset);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_dataset_shuffle(IntPtr opt_ctx, IntPtr dataset, long idata);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_dataset_get_batch(IntPtr dataset, IntPtr data_batch,
+            IntPtr labels_batch, long ibatch);
+
+        // Optimizer parameters
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static Structs.GGmlOptOptimizerParams ggml_opt_get_default_optimizer_params(IntPtr userdata);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static Structs.GGmlOptOptimizerParams ggml_opt_get_constant_optimizer_params(IntPtr userdata);
+
+        // Optimizer context
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_init(Structs.GGmlOptParams opt_params);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_free(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_reset(IntPtr opt_ctx, [MarshalAs(UnmanagedType.I1)] bool optimizer);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public extern static bool ggml_opt_static_graphs(IntPtr opt_ctx);
+
+        // Get optimizer tensors
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_inputs(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_outputs(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_labels(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_loss(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_pred(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_ncorrect(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_grad_acc(IntPtr opt_ctx, IntPtr node);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static Structs.GGmlOptOptimizerType ggml_opt_context_optimizer_type(IntPtr opt_ctx);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_optimizer_name(Structs.GGmlOptOptimizerType optimizer);
+
+        // Optimizer result
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static IntPtr ggml_opt_result_init();
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_result_free(IntPtr result);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_result_reset(IntPtr result);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_result_ndata(IntPtr result, long* ndata);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_result_loss(IntPtr result, double* loss, double* unc);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_result_accuracy(IntPtr result, double* accuracy, double* unc);
+
+        // Optimizer computation
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_alloc(IntPtr opt_ctx, [MarshalAs(UnmanagedType.I1)] bool backward);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_eval(IntPtr opt_ctx, IntPtr result);
+
+        // High-level functions
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static Structs.GGmlOptParams ggml_opt_default_params(IntPtr backend_sched, Structs.GGmlOptLossType loss_type);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_fit(IntPtr backend_sched, IntPtr ctx_compute, IntPtr inputs, IntPtr outputs,
+            IntPtr dataset, Structs.GGmlOptLossType loss_type, Structs.GGmlOptOptimizerType optimizer,
+            IntPtr get_opt_pars, long nepoch, long nbatch_logical, float val_split, [MarshalAs(UnmanagedType.I1)] bool silent);
+
+        [DllImport(DllNameBase, CallingConvention = CallingConvention.Cdecl)]
+        public extern static void ggml_opt_epoch(IntPtr opt_ctx, IntPtr dataset, IntPtr result_train, IntPtr result_eval,
+            long idata_split, IntPtr get_opt_pars, IntPtr get_opt_pars_ud);
+
         // ============ Scale with Bias ============
 
         /// <summary>
@@ -2588,4 +2756,3 @@ namespace GGMLSharp
 
     }
 }
-
