@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "GGMLSharp.Tests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "_NO_DEBUG_HEAP": "1"
+      }
+    }
+  }
+}
