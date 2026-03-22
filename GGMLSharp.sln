@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.9.34616.47
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GGMLSharp", "GGMLSharp\GGMLSharp.csproj", "{001FD1F1-EC17-45E9-B750-A2A2029E6C60}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestOpt", "Demos\TestOpt\TestOpt.csproj", "{D6CED790-5462-480B-ACA6-F65A22C5CF56}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yolov3Tiny", "Demos\Yolov3Tiny\Yolov3Tiny.csproj", "{2F1AD71D-F846-4CB4-827B-507F8224318A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GGMLSharp.Tests", "Tests\GGMLSharp.Tests.csproj", "{3ADE3227-0204-BF97-4C78-FD79F4586A75}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +79,10 @@ Global
 		{2F1AD71D-F846-4CB4-827B-507F8224318A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F1AD71D-F846-4CB4-827B-507F8224318A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F1AD71D-F846-4CB4-827B-507F8224318A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3ADE3227-0204-BF97-4C78-FD79F4586A75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3ADE3227-0204-BF97-4C78-FD79F4586A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3ADE3227-0204-BF97-4C78-FD79F4586A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3ADE3227-0204-BF97-4C78-FD79F4586A75}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

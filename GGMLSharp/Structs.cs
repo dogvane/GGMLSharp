@@ -230,6 +230,7 @@ namespace GGMLSharp
 		public delegate void Custom1OpDelegate([MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor dst, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor a, int ith, int nth, IntPtr userdata);
 		public delegate void Custom2OpDelegate([MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor dst, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor a, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor b, int ith, int nth, IntPtr userdata);
 		public delegate void Custom3OpDelegate([MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor dst, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor a, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor b, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor c, int ith, int nth, IntPtr userdata);
+		public delegate void CustomOpDelegate([MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(GGmlCustomMarshaler))] SafeGGmlTensor dst, int ith, int nth, IntPtr userdata);
 
 		public sealed class GGmlCustomMarshaler : ICustomMarshaler
 		{
@@ -277,6 +278,7 @@ namespace GGMLSharp
 
 			GGML_OP_DUP,
 			GGML_OP_ADD,
+			GGML_OP_ADD_ID,
 			GGML_OP_ADD1,
 			GGML_OP_ACC,
 			GGML_OP_SUB,
@@ -285,10 +287,14 @@ namespace GGMLSharp
 			GGML_OP_SQR,
 			GGML_OP_SQRT,
 			GGML_OP_LOG,
+			GGML_OP_SIN,
+			GGML_OP_COS,
 			GGML_OP_SUM,
 			GGML_OP_SUM_ROWS,
+			GGML_OP_CUMSUM,
 			GGML_OP_MEAN,
 			GGML_OP_ARGMAX,
+			GGML_OP_COUNT_EQUAL,
 			GGML_OP_REPEAT,
 			GGML_OP_REPEAT_BACK,
 			GGML_OP_CONCAT,
@@ -300,6 +306,7 @@ namespace GGMLSharp
 			GGML_OP_RMS_NORM,
 			GGML_OP_RMS_NORM_BACK,
 			GGML_OP_GROUP_NORM,
+			GGML_OP_L2_NORM,
 
 			GGML_OP_MUL_MAT,
 			GGML_OP_MUL_MAT_ID,
@@ -315,6 +322,7 @@ namespace GGMLSharp
 			GGML_OP_TRANSPOSE,
 			GGML_OP_GET_ROWS,
 			GGML_OP_GET_ROWS_BACK,
+			GGML_OP_SET_ROWS,
 			GGML_OP_DIAG,
 			GGML_OP_DIAG_MASK_INF,
 			GGML_OP_DIAG_MASK_ZERO,
@@ -325,22 +333,31 @@ namespace GGMLSharp
 			GGML_OP_CLAMP,
 			GGML_OP_CONV_TRANSPOSE_1D,
 			GGML_OP_IM2COL,
+			GGML_OP_IM2COL_BACK,
+			GGML_OP_IM2COL_3D,
+			GGML_OP_CONV_2D,
+			GGML_OP_CONV_3D,
+			GGML_OP_CONV_2D_DW,
 			GGML_OP_CONV_TRANSPOSE_2D,
 			GGML_OP_POOL_1D,
 			GGML_OP_POOL_2D,
+			GGML_OP_POOL_2D_BACK,
 			/// <summary>
 			/// nearest interpolate
 			/// </summary>
 			GGML_OP_UPSCALE,
 			GGML_OP_PAD,
+			GGML_OP_PAD_REFLECT_1D,
+			GGML_OP_ROLL,
 			GGML_OP_ARANGE,
 			GGML_OP_TIMESTEP_EMBEDDING,
 			GGML_OP_ARGSORT,
+			GGML_OP_TOP_K,
 			GGML_OP_LEAKY_RELU,
+			GGML_OP_TRI,
+			GGML_OP_FILL,
 
-			GGML_OP_FLASH_ATTN,
 			GGML_OP_FLASH_ATTN_EXT,
-			GGML_OP_FLASH_FF,
 			GGML_OP_FLASH_ATTN_BACK,
 			GGML_OP_SSM_CONV,
 			GGML_OP_SSM_SCAN,
@@ -348,89 +365,23 @@ namespace GGMLSharp
 			GGML_OP_WIN_UNPART,
 			GGML_OP_GET_REL_POS,
 			GGML_OP_ADD_REL_POS,
+			GGML_OP_RWKV_WKV6,
+			GGML_OP_GATED_LINEAR_ATTN,
+			GGML_OP_RWKV_WKV7,
+			GGML_OP_SOLVE_TRI,
 
 			GGML_OP_UNARY,
-
-			GGML_OP_MAP_UNARY,
-			GGML_OP_MAP_BINARY,
-
-			GGML_OP_MAP_CUSTOM1_F32,
-			GGML_OP_MAP_CUSTOM2_F32,
-			GGML_OP_MAP_CUSTOM3_F32,
 
 			GGML_OP_MAP_CUSTOM1,
 			GGML_OP_MAP_CUSTOM2,
 			GGML_OP_MAP_CUSTOM3,
+			GGML_OP_CUSTOM,
 
 			GGML_OP_CROSS_ENTROPY_LOSS,
 			GGML_OP_CROSS_ENTROPY_LOSS_BACK,
-
-			// New operations in latest ggml
-			GGML_OP_ADD_ID,
-			GGML_OP_ADD_INPLACE,
-			GGML_OP_ADD_CAST,
-			// GGML_OP_ACC is already defined above
-			GGML_OP_CUMSUM,
-			GGML_OP_COUNT_EQUAL,
-			GGML_OP_L2_NORM,
-			GGML_OP_GLU,
-			GGML_OP_REGGLU,
-			GGML_OP_GEGLU,
-			GGML_OP_SWIGLU,
-			GGML_OP_SWIGLU_OAI,
-			GGML_OP_SOFT_MAX_EXT,
-			GGML_OP_SOFT_MAX_EXT_BACK,
-			GGML_OP_ROPE_EXT,
-			GGML_OP_ROPE_MULTI,
-			GGML_OP_ROPE_MULTI_BACK,
-			GGML_OP_CONV_1D,
-			GGML_OP_CONV_2D,
-			GGML_OP_CONV_2D_DW,
-			GGML_OP_CONV_3D,
-			GGML_OP_CONV_TRANSPOSE_3D,
-			GGML_OP_IM2COL_3D,
-			GGML_OP_POOL_2D_BACK,
-			GGML_OP_PAD_REFLECT_1D,
-			GGML_OP_PAD_EXT,
-			GGML_OP_PAD_CIRCULAR,
-			GGML_OP_INTERPOLATE,
-			GGML_OP_ARGSORT_TOP_K,
-			GGML_OP_TOP_K,
-			GGML_OP_RWKV_WKV6,
-			GGML_OP_RWKV_WKV7,
-			GGML_OP_GATED_LINEAR_ATTN,
-			GGML_OP_SOLVE_TRI,
 			GGML_OP_OPT_STEP_ADAMW,
 			GGML_OP_OPT_STEP_SGD,
-			GGML_OP_SET_ROWS,
-			GGML_OP_REPEAT_4D,
-			GGML_OP_BUILD_FORWARD_SELECT,
-			GGML_OP_CONT_1D,
-			GGML_OP_CONT_2D,
-			GGML_OP_CONT_3D,
-			GGML_OP_CONT_4D,
-			GGML_OP_SCALE_BIAS,
-			GGML_OP_IM2COL_BACK,
-			GGML_OP_ROLL,
-			GGML_OP_FILL,
-			GGML_OP_TRI,
-			GGML_OP_TOP_K_BACK,
-			GGML_OP_SOFT_MAX_ADD_SINKS,
-			GGML_OP_FLASH_ATTN_EXT_ADD_SINKS,
-			GGML_OP_RMS_NORM_1,
-			GGML_OP_NORM_BACK,
-			GGML_OP_MUL_MAT_ID_1,
-			GGML_OP_MUL_MAT_ID_2,
-			GGML_OP_MUL_MAT_ID_3,
-			GGML_OP_MUL_MAT_ID_4,
-			GGML_OP_MUL_MAT_ID_5,
-			GGML_OP_MUL_MAT_ID_6,
-			GGML_OP_MUL_MAT_ID_7,
-			GGML_OP_MUL_MAT_ID_8,
-			GGML_OP_MUL_MAT_ID_9,
-			GGML_OP_MUL_MAT_ID_10,
-			GGML_OP_CROSS_ENTROPY_LOSS_1,
-			GGML_OP_CROSS_ENTROPY_LOSS_BACK_1,
+			GGML_OP_GLU,
 			GGML_OP_COUNT,
 		};
 
@@ -514,6 +465,103 @@ namespace GGMLSharp
 			GGML_TENSOR_FLAG_OUTPUT = 2,
 			GGML_TENSOR_FLAG_PARAM = 4,
 		};
+
+		// ========== New GGML Optimizer Structures (ggml-opt.h) ==========
+
+		/// <summary>
+		/// Loss types for the new optimizer API
+		/// </summary>
+		public enum GGmlOptLossType
+		{
+			GGML_OPT_LOSS_TYPE_MEAN,
+			GGML_OPT_LOSS_TYPE_SUM,
+			GGML_OPT_LOSS_TYPE_CROSS_ENTROPY,
+			GGML_OPT_LOSS_TYPE_MEAN_SQUARED_ERROR,
+		}
+
+		/// <summary>
+		/// Optimizer types for the new optimizer API
+		/// </summary>
+		public enum GGmlOptOptimizerType
+		{
+			GGML_OPT_OPTIMIZER_TYPE_ADAMW,
+			GGML_OPT_OPTIMIZER_TYPE_SGD,
+			GGML_OPT_OPTIMIZER_TYPE_COUNT
+		}
+
+		/// <summary>
+		/// Build types for the new optimizer API
+		/// </summary>
+		public enum GGmlOptBuildType
+		{
+			GGML_OPT_BUILD_TYPE_FORWARD = 10,
+			GGML_OPT_BUILD_TYPE_GRAD = 20,
+			GGML_OPT_BUILD_TYPE_OPT = 30,
+		}
+
+		/// <summary>
+		/// Optimizer parameters for the new optimizer API
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct GGmlOptOptimizerParams
+		{
+			[StructLayout(LayoutKind.Sequential)]
+			public struct AdamwParams
+			{
+				public float alpha; // learning rate
+				public float beta1; // first AdamW momentum
+				public float beta2; // second AdamW momentum
+				public float eps;   // epsilon for numerical stability
+				public float wd;    // weight decay - 0.0f to disable
+			}
+
+			[StructLayout(LayoutKind.Sequential)]
+			public struct SgdParams
+			{
+				public float alpha; // learning rate
+				public float wd;    // weight decay
+			}
+
+			public AdamwParams adamw;
+			public SgdParams sgd;
+		}
+
+		/// <summary>
+		/// Result type for optimizer operations
+		/// </summary>
+		public enum GGmlOptResult
+		{
+			GGML_OPT_RESULT_OK = 0,
+			GGML_OPT_RESULT_DID_NOT_CONVERGE,
+			GGML_OPT_RESULT_NO_CONTEXT,
+			GGML_OPT_RESULT_INVALID_WOLFE,
+			GGML_OPT_RESULT_FAIL,
+			GGML_OPT_RESULT_CANCEL,
+		}
+
+		/// <summary>
+		/// Delegate for getting optimizer parameters
+		/// </summary>
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate GGmlOptOptimizerParams GGmlOptGetOptimizerParamsDelegate(IntPtr userdata);
+
+		/// <summary>
+		/// Parameters for initializing an optimization context
+		/// </summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct GGmlOptParams
+		{
+			public IntPtr backend_sched; // ggml_backend_sched_t
+			public IntPtr ctx_compute;   // ggml_context*
+			public IntPtr inputs;        // ggml_tensor*
+			public IntPtr outputs;       // ggml_tensor*
+			public GGmlOptLossType loss_type;
+			public GGmlOptBuildType build_type;
+			public int opt_period;
+			public IntPtr get_opt_pars;  // ggml_opt_get_optimizer_params
+			public IntPtr get_opt_pars_ud; // void*
+			public GGmlOptOptimizerType optimizer;
+		}
 
 	}
 }

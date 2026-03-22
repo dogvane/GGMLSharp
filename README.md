@@ -9,7 +9,7 @@ git submodule update --remote --merge
 ```
 
 ggml is a wonderful C-language machine-learning tool, and now you can use it with C#.</br>
-GGMLSharp contains all ggml shared libs and some demos. 
+GGMLSharp contains all ggml shared libs and some demos.
 
 ``` 
 mkdir build
@@ -25,16 +25,19 @@ cmake --build . --config Release
 - Written in C# only
 - Only depends on ggml
 - All Demos can use safe code only!
+- Support for Convolution operations (1D, Depthwise, Transpose)
+- Support for Activation functions (Sigmoid, Tanh)
+- Dynamic backend selection (CPU/CUDA)
 
-## Demos
 
 ### mnist_cpu
 
   [mnist_cpu](./Demos/MNIST_CPU/) is a basic demo for learning how to use GGMLSharp. It contains two Linears.
-
+  
 ### mnist_cnn
 
-  [mnist_cnn](./Demos/MNIST_CNN/) is a demos show how to use convolution. In this demo, there are two conv2d and pool max.
+  [mnist_cnn](./Demos/MNIST_CNN/) is a demos show how to use convolution. In this demo, there are two conv2d and pool max.  
+  Now also includes support for 1D convolution operations.
 
 ### mnist_train
 
@@ -66,4 +69,20 @@ cmake --build . --config Release
 
 ### Yolov3Tiny
 
-[Yolov3Tiny](./Demos/Yolov3Tiny/) is a Demo shows how to implement YOLO object detection with ggml using pretrained model. The weight have been converted to gguf.
+  [Yolov3Tiny](./Demos/Yolov3Tiny/) is a Demo shows how to implement YOLO object detection with ggml using pretrained model. The weight have been converted to gguf.
+
+## Tests
+
+The test suite is organized into a few broad groups:
+
+- **Convolution and pooling** - 1D/2D convolution, depthwise convolution, transpose convolution, and pooling-related coverage.
+- **Tensor and operator behavior** - tensor layout and transformation operations such as `cont`, `dup`, `roll`, padding, interpolation, and custom operators.
+- **Backend and execution** - backend-related execution paths and compute behavior on supported backends.
+- **Quantization and optimizer** - quantization helpers, quantization performance checks, and optimizer-related coverage.
+- **Embedding and positional ops** - arange, relative position, timestep embedding, and similar utility operators.
+
+Run tests:
+```bash
+cd Tests
+dotnet run
+```

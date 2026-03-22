@@ -15,14 +15,17 @@ namespace SAM
 			// First you shold download the sam_vit_b ModelPath and move it to Assets folder.
 			// The download link is: https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
 
-			SamParams samParam = new SamParams()
+			var modelPath = Path.Combine(AppContext.BaseDirectory, "./Assets/sam_vit_b_01ec64.pth");
+			var imagePath = Path.Combine(AppContext.BaseDirectory, "./Assets/example.jpg");	
+
+            SamParams samParam = new SamParams()
 			{
 				IouThreshold = 0.9f,
 				StabilityScoreThreshold = 0.9f,
 				Point = new SKPoint(274.0f, 244.0f),
-				ModelPath = @"./Assets/sam_vit_b_01ec64.pth",
-				ImageInputPath = @"./Assets/example.jpg",
-				Threads = 16,
+				ModelPath = modelPath,
+				ImageInputPath = imagePath,
+                Threads = 16,
 			};
 
 			// Load ModelPath
@@ -575,7 +578,8 @@ namespace SAM
 		{
 			if (!File.Exists(samParams.ModelPath))
 			{
-				throw new FileNotFoundException("Model file not found");
+				Console.WriteLine($"Model file not found: {samParams.ModelPath}");
+				throw new FileNotFoundException($"Model file not found: {samParams.ModelPath}");
 			}
 
 			PickleLoader modelLoader = new PickleLoader();

@@ -363,3 +363,9 @@ MigrationBackup/
 FodyWeavers.xsd
 .claude/settings.local.json
 .vscode/settings.json
+.dotnet/
+*.log
+nul
+codeplan_mark_docs/
+NuGet.Config
+global.json

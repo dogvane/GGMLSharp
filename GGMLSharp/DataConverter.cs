@@ -105,5 +105,15 @@ namespace GGMLSharp
 			}
 			Array.Resize(ref data, data.Length / 2);
 		}
+
+		public static ushort[] F32ToF16(float[] data)
+		{
+			ushort[] result = new ushort[data.Length];
+			for (int i = 0; i < data.Length; i++)
+			{
+				result[i] = Native.ggml_fp32_to_fp16(data[i]);
+			}
+			return result;
+		}
 	}
 }

@@ -10,6 +10,11 @@ namespace GGMLSharp
 
 		private bool IsInitialized => handle != IntPtr.Zero;
 
+	/// <summary>
+	/// Gets the native handle for this tensor (useful for interop with other native functions)
+	/// </summary>
+	public IntPtr NativeHandle => handle;
+
 		public SafeGGmlTensor()
 		{
 			handle = IntPtr.Zero;
@@ -76,6 +81,11 @@ namespace GGMLSharp
 			}
 		}
 
+		/// <summary>
+		/// Stride (bytes per dimension) - alias for Stride
+		/// </summary>
+		public ulong[] Nb => Stride;
+
 		public Structs.GGmlType Type => (Structs.GGmlType)tensor->type;
 
 		// NOTE: 'backend' field removed in ggml v0.9.7+
@@ -110,6 +120,17 @@ namespace GGMLSharp
 				}
 				return src;
 			}
+		}
+
+		public void SetSource(int index, SafeGGmlTensor? source)
+		{
+			ThrowIfNotInitialized();
+			if (index < 0 || index >= GGML_MAX_SRC)
+			{
+				throw new ArgumentOutOfRangeException(nameof(index));
+			}
+
+			tensor->src[index] = (ggml_tensor*)(source?.NativeHandle ?? IntPtr.Zero);
 		}
 
 		public void SetData(byte[] data)
@@ -183,8 +204,8 @@ namespace GGMLSharp
 				throw new ArgumentNullException(nameof(data), "Data array is null or empty");
 			}
 
-			// 计算需要的字节数（将 int 转换为 float）
-			ulong size = (ulong)(data.Length * sizeof(float));
+			// 计算需要的字节数
+			ulong size = (ulong)(data.Length * sizeof(int));
 			ulong tensorSize = ElementsSize * (ulong)ElementsCount;
 
 			if (size != tensorSize)
@@ -192,20 +213,12 @@ namespace GGMLSharp
 				throw new ArgumentOutOfRangeException(nameof(data), $"Data size {size} bytes does not match tensor size {tensorSize} bytes");
 			}
 
-			// 复制数据（int 转换为 float）
-			// 先将 int 转换为 float，然后复制
-			float[] floatData = new float[data.Length];
-			for (int i = 0; i < data.Length; i++)
-			{
-				floatData[i] = (float)data[i];
-			}
-
 			// 分配临时非托管内存
 			IntPtr tempBuffer = Marshal.AllocHGlobal((int)size);
 			try
 			{
 				// 复制数据到临时缓冲区
-				Marshal.Copy(floatData, 0, tempBuffer, floatData.Length);
+				Marshal.Copy(data, 0, tempBuffer, data.Length);
 				// 使用 backend API 来设置数据
 				Native.ggml_backend_tensor_set(this, tempBuffer, 0, size);
 			}
@@ -213,6 +226,29 @@ namespace GGMLSharp
 			{
 				Marshal.FreeHGlobal(tempBuffer);
 			}
+		}
+
+		public void SetData(int data, int ne0, int ne1 = 0, int ne2 = 0, int ne3 = 0)
+		{
+			ThrowIfNotInitialized();
+			Native.ggml_set_i32_nd(this, ne0, ne1, ne2, ne3, data);
+		}
+
+		public void SetInt1D(int index, int value)
+		{
+			ThrowIfNotInitialized();
+			Native.ggml_set_i32_1d(this, index, value);
+		}
+
+		public int GetInt(int n0 = 0, int n1 = 0, int n2 = 0, int n3 = 0)
+		{
+			return Native.ggml_get_i32_nd(this, n0, n1, n2, n3);
+		}
+
+		public int GetInt1D(int index)
+		{
+			ThrowIfNotInitialized();
+			return Native.ggml_get_i32_1d(this, index);
 		}
 
 		//public void SetData(float data, int index)
@@ -232,7 +268,25 @@ namespace GGMLSharp
 			return Native.ggml_get_f32_nd(this, n0, n1, n2, n3);
 		}
 
-		public float[] GetDataInFloats()
+        public float[] GetDataInFloat16()
+        {
+            long length = ElementsCount;
+            IntPtr dataPtr = Native.ggml_get_data(this);
+            float[] floats = new float[length];
+
+            unsafe
+            {
+                ushort* fp16Data = (ushort*)dataPtr;
+                for (long i = 0; i < length; i++)
+                {
+                    floats[i] = Native.ggml_fp16_to_fp32(fp16Data[i]);
+                }
+            }
+
+            return floats;
+        }
+
+        public float[] GetDataInFloats()
 		{
 			long length = Shape[0] * Shape[1] * Shape[2] * Shape[3];
 			float* f = Native.ggml_get_data_f32(this);
@@ -371,8 +425,49 @@ namespace GGMLSharp
 			return Native.ggml_is_quantized(this.Type);
 		}
 
+		public ulong NBytes
+		{
+			get { return Native.ggml_nbytes(this); }
+		}
 
+		public long NElements
+		{
+			get { return Native.ggml_nelements(this); }
+		}
 
+		public float[] GetDataF32()
+		{
+			ThrowIfNotInitialized();
+			float* data = Native.ggml_get_data_f32(this);
+			if (data == null)
+			{
+				return new float[0];
+			}
+			long nElements = NElements;
+			float[] result = new float[nElements];
+			for (long i = 0; i < nElements; i++)
+			{
+				result[i] = data[i];
+			}
+			return result;
+		}
 
-	}
+		public void TensorSet(float[] data, ulong dataOffset, ulong dataSize)
+		{
+			ThrowIfNotInitialized();
+			IntPtr dataPtr = Marshal.AllocHGlobal(data.Length * 4);
+			Marshal.Copy(data, 0, dataPtr, data.Length);
+			Native.ggml_backend_tensor_set(this, dataPtr, dataOffset, dataSize);
+			Marshal.FreeHGlobal(dataPtr);
+		}
+
+		public void TensorGet(float[] data, ulong dataOffset, ulong dataSize)
+		{
+			ThrowIfNotInitialized();
+			IntPtr dataPtr = Marshal.AllocHGlobal(data.Length * 4);
+			Native.ggml_backend_tensor_get(this, dataPtr, dataOffset, dataSize);
+			Marshal.Copy(dataPtr, data, 0, data.Length);
+			Marshal.FreeHGlobal(dataPtr);
+		}
+		}
 }

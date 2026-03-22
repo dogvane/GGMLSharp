@@ -62,12 +62,11 @@ namespace Converter
 				ulong totalSize = 0;
 				for (int i = 0; i < (int)ggufContext.TensorsCount; ++i)
 				{
-					SafeGGufTensorInfo info = ggufContext.GGufTensorInfos[i];
-					string name = info.Name;
+					string name = ggufContext.GetTensorName(i);
 					Console.WriteLine($"{name} is doing, current total byte is {totalSize}");
 
 					ModelLoader.Tensor tensor = tensors.Find(x => x.Name == name);
-					ulong size = Math.Max(info.Size, ggufContext.Alignment);
+					ulong size = Math.Max(ggufContext.GetTensorSize(i), ggufContext.Alignment);
 
 					ulong size_pad = (ulong)SafeGGmlContext.GetPad((int)size, (int)ggufContext.Alignment);
 

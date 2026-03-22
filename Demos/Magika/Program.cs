@@ -90,14 +90,31 @@ namespace Magika
 
 		private static MagikaModel LoadModel(string fname)
 		{
-			MagikaModel model = new MagikaModel();
-			SafeGGufContext ggufContext = SafeGGufContext.InitFromFile("./Assets/magika.gguf", model.context, true);
+			var modelFile = "Assets/magika.gguf";
+			modelFile = Path.Combine(AppContext.BaseDirectory , modelFile);
+
+            MagikaModel model = new MagikaModel();
+			Console.WriteLine($"Loading model from: {modelFile}");
+			SafeGGufContext ggufContext = SafeGGufContext.InitFromFile(modelFile, model.context, true);
 
 			model.backend = SafeGGmlBackend.CpuInit(); // init device 0
 
-			if (!ggufContext.IsHeaderMagicMatch)
+			if (ggufContext.IsInvalid)
 			{
-				throw new FileLoadException("gguf_init_from_file failed");
+				throw new FileLoadException("gguf_init_from_file failed: unable to load GGUF file (file may not exist or be corrupted)");
+			}
+
+			Console.WriteLine($"GGUF context handle: {ggufContext.DangerousGetHandle()}");
+
+			if (!ggufContext.ValidateContentHeaderMagic())
+			{
+				if (!ggufContext.ValidateFileHeaderMagic())
+				{
+					throw new Exception("gguf_init_from_file failed: invalid GGUF file header (file may not be a valid GGUF file).  File header validate fail and content validate fail.");
+                }
+
+				ggufContext.Free();
+				throw new FileLoadException("gguf_init_from_file failed: invalid GGUF header (file may not be a valid GGUF file). File header validate succes but content validate fail.");
 			}
 			model.backendBuffer = model.context.BackendAllocContextTensors(model.backend);
 			if (model.backendBuffer.IsInvalid)
@@ -133,20 +150,42 @@ namespace Magika
 				return null;
 			}
 
-			using (FileStream fs = new FileStream(fname, FileMode.Open, FileAccess.Read))
+			using (FileStream fs = new FileStream(modelFile, FileMode.Open, FileAccess.Read))
 			{
+				Console.WriteLine($"开始加载 tensor 数据，总共有 {ggufContext.TensorsCount} 个 tensor");
 				for (ulong i = 0; i < ggufContext.TensorsCount; i++)
 				{
-					string name = ggufContext.GetTensorName((int)i);
+					try
+					{
+						Console.WriteLine($"正在处理 tensor [{i}/{ggufContext.TensorsCount}]");
+						string name = ggufContext.GetTensorName((int)i);
+						Console.WriteLine($"  Tensor 名称: {name}");
 
-					SafeGGmlTensor tensor = model.context.GetTensor(name);
-					ulong offs = ggufContext.GetDataOffset() + ggufContext.GetTensorOffset((int)i);
+						SafeGGmlTensor tensor = model.context.GetTensor(name);
+						if (tensor == null || tensor.IsInvalid)
+						{
+							Console.WriteLine($"  警告: 无法获取 tensor '{name}'");
+							continue;
+						}
 
-					byte[] buf = new byte[(long)tensor.ElementsSize * tensor.ElementsCount];
-					fs.Seek((long)offs, SeekOrigin.Begin);
-					int bytesRead = fs.Read(buf, 0, buf.Length);
-					tensor.SetBackend(buf);
+						ulong offs = ggufContext.GetDataOffset() + ggufContext.GetTensorOffset((int)i);
+						Console.WriteLine($"  数据偏移: {offs}");
+
+						byte[] buf = new byte[(long)tensor.ElementsSize * tensor.ElementsCount];
+						fs.Seek((long)offs, SeekOrigin.Begin);
+						int bytesRead = fs.Read(buf, 0, buf.Length);
+						Console.WriteLine($"  读取字节数: {bytesRead}");
+						tensor.SetBackend(buf);
+						Console.WriteLine($"  Tensor [{i}] 加载完成");
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"加载 tensor [{i}] 时发生错误: {ex.Message}");
+						Console.WriteLine($"错误堆栈: {ex.StackTrace}");
+						throw;
+					}
 				}
+				Console.WriteLine("所有 tensor 加载完成");
 			}
 
 			//ggufContext.Free();
@@ -298,7 +337,8 @@ namespace Magika
 			MagikaModel model = LoadModel("./Assets/magika.gguf");
 			Console.WriteLine("Loaded model");
 
-			float[] result = Eval(model, "./Assets/test");
+			string testFile = Path.Combine(AppContext.BaseDirectory, "Assets/test");
+			float[] result = Eval(model, testFile);
 			List<result> results = new List<result>();
 			for (int i = 0; i < result.Length; i++)
 			{
@@ -310,7 +350,16 @@ namespace Magika
 			{
 				Console.WriteLine("{0}: {1}", results[i].label, results[i].score);
 			}
-			Console.ReadKey();
+
+			// Only wait for key press if running in interactive console
+			try
+			{
+				Console.ReadKey();
+			}
+			catch (InvalidOperationException)
+			{
+				// Input redirected, ignore
+			}
 		}
 	}
 }

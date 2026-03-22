@@ -129,10 +129,9 @@ namespace Converter.Safetensors
 				ulong totalSize = (ulong)bytes.Length;
 				for (int i = 0; i < (int)ggufContext.TensorsCount; ++i)
 				{
-					SafeGGufTensorInfo info = ggufContext.GGufTensorInfos[i];
-					string name = info.Name;
+					string name = ggufContext.GetTensorName(i);
 					ModelLoader.Tensor tensor = tensors.Find(x => DataTrans.TensorNameTransToGgufName(x.Name) == name);
-					ulong size = Math.Max(info.Size, ggufContext.Alignment);
+					ulong size = Math.Max(ggufContext.GetTensorSize(i), ggufContext.Alignment);
 
 					ulong size_pad = (ulong)SafeGGmlContext.GetPad((int)size, (int)ggufContext.Alignment);
 

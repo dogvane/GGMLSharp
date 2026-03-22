@@ -1,5 +1,6 @@
-﻿using GGMLSharp;
+using GGMLSharp;
 using SkiaSharp;
+using static GGMLSharp.Structs;
 
 namespace Yolov3Tiny
 {
@@ -20,28 +21,34 @@ namespace Yolov3Tiny
 			string[] labels = File.ReadAllLines(labelPath);
 			int classes = labels.Length;
 
-			SafeGGmlContext ctx0 = new SafeGGmlContext(IntPtr.Zero, 512 * 1024 * 1024, false);
+			YoloModel model = LoadModel(modelPath, modelWidth, modelHeight);
+			Console.WriteLine($"After loading model - Context objects count: {model.context.ObjectCount()}");
 
-			YoloModel model = LoadModel(modelPath);
+			SafeGGmlTensor input = model.input;
 
 			using SKBitmap inputImg = SKBitmap.Decode(inputImgPath);
 			using SKBitmap resizedImg = ResizeImage(inputImg, modelWidth, modelHeight, out float ratio);
 
-			// --- SkiaSharp Pixel Access ---
 			byte[] data = resizedImg.Bytes;
-			using SafeGGmlTensor input = ctx0.NewTensor4d(Structs.GGmlType.GGML_TYPE_F32, modelWidth, modelHeight, 3, 1);
-			input.Name = "input";
+			float[] inputData = new float[modelWidth * modelHeight * 3];
 
 			for (int y = 0; y < modelHeight; y++)
 			{
 				for (int x = 0; x < modelWidth; x++)
 				{
 					var pixelIndex = (y * resizedImg.Width + x) * resizedImg.BytesPerPixel;
-					input.SetData(data[pixelIndex + 2] / 255.0f, x, y, 0, 0); // R
-					input.SetData(data[pixelIndex + 1] / 255.0f, x, y, 1, 0); // G
-					input.SetData(data[pixelIndex + 0] / 255.0f, x, y, 2, 0); // B
+					int dataIdx = y * modelWidth + x;
+					inputData[dataIdx] = data[pixelIndex + 2] / 255.0f;
+					inputData[dataIdx + modelWidth * modelHeight] = data[pixelIndex + 1] / 255.0f;
+					inputData[dataIdx + modelWidth * modelHeight * 2] = data[pixelIndex + 0] / 255.0f;
 				}
 			}
+
+			input.SetBackend(inputData);
+
+			ulong bufSize = 1024UL * 1024 * 10;
+			byte[] graphBuffer = new byte[bufSize];
+			SafeGGmlContext ctx0 = new SafeGGmlContext(graphBuffer, true);
 
 			SafeGGmlTensor result = ApplyConv2d(ctx0, input, model.Conv2dLayers[0]);
 			PrintShape(0, result);
@@ -96,7 +103,14 @@ namespace Yolov3Tiny
 			SafeGGmlGraph gf = ctx0.NewGraph();
 			gf.BuildForwardExpend(layer15);
 			gf.BuildForwardExpend(layer_22);
-			gf.ComputeWithGGmlContext(ctx0, 1);
+
+			SafeGGmlGraphAllocr alloc = new SafeGGmlGraphAllocr(model.backend.GetDefaultBufferType());
+			if (!gf.GraphAllocate(alloc))
+			{
+				throw new Exception("ggml_gallocr_alloc_graph() failed");
+			}
+
+			gf.BackendCompute(model.backend);
 
 			YoloLayer yolo16 = new YoloLayer(classes, new int[] { 3, 4, 5 }, new float[] { 10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319 }, layer15);
 			ApplyYolo(yolo16);
@@ -228,7 +242,7 @@ namespace Yolov3Tiny
 			public SafeGGmlTensor RollingVariance;
 			public int Padding = 1;
 			public bool NatchNormalize = true;
-			public bool Activate = true; // true for leaky relu, false for linear
+			public bool Activate = true;
 		};
 
 		public class YoloModel
@@ -236,7 +250,10 @@ namespace Yolov3Tiny
 			public int Width = 416;
 			public int Height = 416;
 			public Conv2dLayer[] Conv2dLayers = new Conv2dLayer[13];
-			public SafeGGmlContext context = new SafeGGmlContext();
+			public SafeGGmlContext context;
+			public SafeGGmlBackend backend;
+			public SafeGGmlBackendBuffer backendBuffer;
+			public SafeGGmlTensor input;
 		};
 
 		public class YoloLayer
@@ -282,14 +299,18 @@ namespace Yolov3Tiny
 			}
 		};
 
-		public static YoloModel LoadModel(string fname)
+		public static YoloModel LoadModel(string fname, int modelWidth, int modelHeight)
 		{
 			YoloModel model = new YoloModel();
-			SafeGGufContext ctx = SafeGGufContext.InitFromFile(fname, model.context, false);
-			if (ctx.IsInvalid)
+			model.backend = SafeGGmlBackend.CpuInit();
+
+			SafeGGmlContext loadCtx = new SafeGGmlContext(IntPtr.Zero, 0, true);
+			SafeGGufContext ggufCtx = SafeGGufContext.InitFromFile(fname, loadCtx, true);
+			if (ggufCtx.IsInvalid)
 			{
 				throw new ArgumentNullException("GGuf context is null.");
 			}
+
 			for (int i = 0; i < model.Conv2dLayers.Length; i++)
 			{
 				model.Conv2dLayers[i] = new Conv2dLayer();
@@ -305,19 +326,31 @@ namespace Yolov3Tiny
 			for (int i = 0; i < model.Conv2dLayers.Length; i++)
 			{
 				string name = "l" + i + "_weights";
-				model.Conv2dLayers[i].Weights = model.context.GetTensor(name);
+				model.Conv2dLayers[i].Weights = loadCtx.GetTensor(name);
 				name = "l" + i + "_biases";
-				model.Conv2dLayers[i].Biases = model.context.GetTensor(name);
+				model.Conv2dLayers[i].Biases = loadCtx.GetTensor(name);
 				if (model.Conv2dLayers[i].NatchNormalize)
 				{
 					name = "l" + i + "_scales";
-					model.Conv2dLayers[i].Scales = model.context.GetTensor(name);
+					model.Conv2dLayers[i].Scales = loadCtx.GetTensor(name);
 					name = "l" + i + "_rolling_mean";
-					model.Conv2dLayers[i].RollingMean = model.context.GetTensor(name);
+					model.Conv2dLayers[i].RollingMean = loadCtx.GetTensor(name);
 					name = "l" + i + "_rolling_variance";
-					model.Conv2dLayers[i].RollingVariance = model.context.GetTensor(name);
+					model.Conv2dLayers[i].RollingVariance = loadCtx.GetTensor(name);
 				}
 			}
+			ggufCtx.Free();
+
+			ulong ctxSize = 1024UL * 1024 * 10;
+			IntPtr ctxPtr = System.Runtime.InteropServices.Marshal.AllocHGlobal(new IntPtr((long)ctxSize));
+			model.context = new SafeGGmlContext(ctxPtr, ctxSize, true);
+
+			SafeGGmlTensor input = model.context.NewTensor4d(Structs.GGmlType.GGML_TYPE_F32, modelWidth, modelHeight, 3, 1);
+			input.Name = "input";
+			model.input = input;
+
+			model.backendBuffer = model.context.BackendAllocContextTensors(model.backend);
+
 			return model;
 		}
 
@@ -416,7 +449,6 @@ namespace Yolov3Tiny
 				return 0;
 			}
 
-			// Use SKRect for intersection calculation
 			var a = new SKRect((int)(detA.BBox.X * 100), (int)(detA.BBox.Y * 100), (int)((detA.BBox.X + detA.BBox.W) * 100), (int)((detA.BBox.Y + detA.BBox.H) * 100));
 			var b = new SKRect((int)(detB.BBox.X * 100), (int)(detB.BBox.Y * 100), (int)((detB.BBox.X + detB.BBox.W) * 100), (int)((detB.BBox.Y + detB.BBox.H) * 100));
 
@@ -437,4 +469,3 @@ namespace Yolov3Tiny
 
 
 }
-
